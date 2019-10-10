@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<classpath>
+	<classpathentry kind="con" path="org.eclipse.jdt.launching.JRE_CONTAINER/org.eclipse.jdt.internal.debug.ui.launcher.StandardVMType/jdk1.8.0_73"/>
+	<classpathentry excluding="QueueTest.java" kind="src" path="src"/>
+	<classpathentry kind="lib" path="lib_solrmarc_install/lib/jopt-simple-5.0.2.jar"/>
+	<classpathentry kind="lib" path="lib_solrmarc_install/lib/log4j-1.2.17.jar"/>
+	<classpathentry kind="lib" path="lib_solrmarc_install/lib/marc4j-2.9.jar"/>
+	<classpathentry kind="lib" path="lib_solrmarc_install/lib/slf4j-log4j12-1.7.16.jar"/>
+	<classpathentry kind="lib" path="lib_solrmarc_install/solrmarc_core_3.3-6-gb6bf218-SNAPSHOT.jar" sourcepath="/solrmarc-3.0/src"/>
+	<classpathentry kind="lib" path="lib_aws/amazon-sqs-java-extended-client-lib-1.0.2.jar"/>
+	<classpathentry kind="lib" path="lib_aws/aws-java-sdk-core-1.11.644-SNAPSHOT.jar"/>
+	<classpathentry kind="lib" path="lib_aws/aws-java-sdk-s3-1.11.644.jar"/>
+	<classpathentry kind="lib" path="lib_aws/aws-java-sdk-sqs-1.11.644-SNAPSHOT.jar"/>
+	<classpathentry kind="lib" path="lib_aws/jackson-annotations-2.10.0.jar"/>
+	<classpathentry kind="lib" path="lib_aws/jackson-core-2.10.0.jar"/>
+	<classpathentry kind="lib" path="lib_aws/jackson-databind-2.10.0.jar"/>
+	<classpathentry kind="lib" path="lib_aws/joda-time-2.10.4.jar"/>
+	<classpathentry kind="lib" path="lib_solrmarc_install/lib-solrj/commons-io-2.5.jar"/>
+	<classpathentry kind="lib" path="lib_solrmarc_install/lib-solrj/commons-math3-3.6.1.jar"/>
+	<classpathentry kind="lib" path="lib_solrmarc_install/lib-solrj/httpclient-4.5.3.jar"/>
+	<classpathentry kind="lib" path="lib_solrmarc_install/lib-solrj/httpcore-4.4.6.jar"/>
+	<classpathentry kind="lib" path="lib_solrmarc_install/lib-solrj/httpmime-4.5.3.jar"/>
+	<classpathentry kind="lib" path="lib_solrmarc_install/lib-solrj/jcl-over-slf4j-1.7.24.jar"/>
+	<classpathentry kind="lib" path="lib_solrmarc_install/lib-solrj/noggit-0.8.jar"/>
+	<classpathentry kind="lib" path="lib_solrmarc_install/lib-solrj/slf4j-api-1.7.24.jar"/>
+	<classpathentry kind="lib" path="lib_solrmarc_install/lib-solrj/solr-solrj-7.3.0.jar"/>
+	<classpathentry kind="lib" path="lib_solrmarc_install/lib-solrj/stax2-api-3.1.4.jar"/>
+	<classpathentry kind="lib" path="lib_solrmarc_install/lib-solrj/woodstox-core-asl-4.4.1.jar"/>
+	<classpathentry kind="lib" path="lib_solrmarc_install/lib-solrj/zookeeper-3.4.11.jar"/>
+	<classpathentry kind="output" path="bin"/>
+</classpath>
