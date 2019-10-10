@@ -1,0 +1,277 @@
+/*
+ * Copyright 2010-2018 Amazon.com, Inc. or its affiliates. All Rights Reserved.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License").
+ * You may not use this file except in compliance with the License.
+ * A copy of the License is located at
+ *
+ *  https://aws.amazon.com/apache2.0
+ *
+ * or in the "license" file accompanying this file. This file is distributed
+ * on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either
+ * express or implied. See the License for the specific language governing
+ * permissions and limitations under the License.
+ *
+ */
+
+import com.amazon.sqs.javamessaging.AmazonSQSExtendedClient;
+import com.amazon.sqs.javamessaging.ExtendedClientConfiguration;
+import com.amazonaws.AmazonClientException;
+import com.amazonaws.AmazonServiceException;
+import com.amazonaws.regions.Regions;
+import com.amazonaws.services.s3.AmazonS3;
+import com.amazonaws.services.s3.AmazonS3ClientBuilder;
+import com.amazonaws.services.sqs.AmazonSQS;
+import com.amazonaws.services.sqs.AmazonSQSClientBuilder;
+import com.amazonaws.services.sqs.model.*;
+import com.amazonaws.util.Base64;
+
+import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
+import java.io.FileInputStream;
+import java.io.FileNotFoundException;
+import java.io.StringReader;
+import java.io.UnsupportedEncodingException;
+import java.util.List;
+
+import org.marc4j.MarcJsonReader;
+import org.marc4j.MarcJsonWriter;
+import org.marc4j.MarcPermissiveStreamReader;
+import org.marc4j.MarcReader;
+import org.marc4j.marc.Record;
+import org.marc4j.util.RawRecord;
+import org.marc4j.util.RawRecordReader;
+
+/**
+ * This sample demonstrates how to make basic requests to Amazon SQS using the
+ * AWS SDK for Java.
+ * <p>
+ * Prerequisites: You must have a valid Amazon Web Services developer account,
+ * and be signed up to use Amazon SQS. For more information about Amazon SQS,
+ * see https://aws.amazon.com/sqs
+ * <p>
+ * Make sure that your credentials are located in ~/.aws/credentials
+ */
+public class QueueTest {
+    private static final int SQS_SIZE_LIMIT = 262144;
+
+    public static void main(String[] args) {
+        /*
+         * Create a new instance of the builder with all defaults (credentials
+         * and region) set automatically. For more information, see
+         * Creating Service Clients in the AWS SDK for Java Developer Guide.
+         */
+        boolean useRawBase64 = true;
+        if (args.length > 0 && args[0].equals("-json"))
+        {
+            useRawBase64 = false;
+        }
+        
+        String queueName= "virgo4-ingest-sirsi-inbound-staging";
+        String s3BucketName = "virgo4-ingest-staging-messages";
+        boolean alwaysThroughS3 = false;
+
+        MarcSQSReader reader = new MarcSQSReader(queueName, s3BucketName);
+        boolean done = false;
+        int messageCount = 0;
+        for (int i = 0; i < 15; i++)
+        {
+            Record record = reader.next();
+            if (record != null)
+            {
+                System.out.println(record.toString());
+            }
+        }
+        
+        
+    /*    final AmazonS3 s3 = AmazonS3ClientBuilder.standard().withRegion(Regions.DEFAULT_REGION).build();
+        
+        ExtendedClientConfiguration extendedClientConfig = new ExtendedClientConfiguration();
+        extendedClientConfig.withLargePayloadSupportEnabled(s3, s3BucketName)
+        .withAlwaysThroughS3(alwaysThroughS3).withMessageSizeThreshold(SQS_SIZE_LIMIT);
+        
+        final AmazonSQS sqs = AmazonSQSClientBuilder.defaultClient();
+        final AmazonSQSExtendedClient sqsx = new AmazonSQSExtendedClient(sqs, extendedClientConfig);
+
+        System.out.println("===============================================");
+        System.out.println("Getting Started with Amazon SQS Standard Queues");
+        System.out.println("===============================================\n");
+       // String queueName = "MarcQueue";
+        String myQueueUrl = null;
+        try {
+            // List all queues.
+            System.out.println("Listing all queues in your account.\n");
+            boolean hasMarcQueue = false;
+            for (final String queueUrl : sqsx.listQueues().getQueueUrls()) {
+                System.out.println("  QueueUrl: " + queueUrl);
+                if (queueUrl.contains(queueName))
+                {
+                    hasMarcQueue = true;
+                    myQueueUrl = queueUrl;
+                }
+            }
+            System.out.println();
+
+            if (hasMarcQueue)
+            {
+                System.out.println("SQS queue named "+ queueName + " already exists, using it.\n");
+            }
+            else if (queueName.startsWith("virgo4-ingest"))
+            {
+                System.out.println("NOT creating a new SQS queue called "+ queueName + "\n");
+                System.out.println("Exiting!! \n");
+                System.exit(1);
+            }
+            else 
+            {
+                // Create a queue.
+                System.out.println("Creating a new SQS queue called "+ queueName + "\n");
+                final CreateQueueRequest createQueueRequest = new CreateQueueRequest(queueName);
+                myQueueUrl = sqsx.createQueue(createQueueRequest).getQueueUrl();
+            }
+
+//            // List all queues.
+//            System.out.println("Listing all queues in your account.\n");
+//            for (final String queueUrl : sqsx.listQueues().getQueueUrls()) {
+//                System.out.println("  QueueUrl: " + queueUrl);
+//            }
+//            System.out.println();
+
+            
+            
+            if (!queueName.startsWith("virgo4-ingest"))
+            {
+                if (useRawBase64)
+                {
+                    System.out.println("Creating RawMarcReader on file:  data/specTestRecs.mrc \n");
+                    RawRecordReader reader = new RawRecordReader(new FileInputStream("data/specTestRecs.mrc"), true);
+                    while (reader.hasNext())
+                    {
+                        RawRecord record = reader.next();
+                        // Send a message.
+                        System.out.println("Sending a message to "+ queueName + " \n");
+                        String messageBody = Base64.encodeAsString(record.getRecordBytes());
+        
+                        SendMessageRequest message = new SendMessageRequest(myQueueUrl, messageBody)
+                                .addMessageAttributesEntry("id", new MessageAttributeValue().withDataType("String").withStringValue(record.getRecordId()))
+                                .addMessageAttributesEntry("datasource", new MessageAttributeValue().withDataType("String").withStringValue("sirsi"))
+                                .addMessageAttributesEntry("type", new MessageAttributeValue().withDataType("String").withStringValue("base64/marc"));
+                        sqsx.sendMessage(message);
+                    }
+                    
+                }
+                else // marcinJSON
+                {
+                    System.out.println("Creating MarcReader on file:  data/specTestRecs.mrc \n");
+                    MarcReader reader = new MarcPermissiveStreamReader(new FileInputStream("data/specTestRecs.mrc"), true, true);
+                    ByteArrayOutputStream baos = new ByteArrayOutputStream();
+                    MarcJsonWriter buffer = new MarcJsonWriter(baos);
+                    while (reader.hasNext())
+                    {
+                        Record record = reader.next();
+                        buffer.write(record);
+                        // Send a message.
+                        System.out.println("Sending a message to "+ queueName + " \n");
+                        String messageBody = null;
+                        try
+                        {
+                            messageBody = baos.toString("UTF8");
+                        }
+                        catch (UnsupportedEncodingException e)
+                        {
+                            // TODO Auto-generated catch block
+                            e.printStackTrace();
+                        }
+                        baos.reset();
+        
+                        SendMessageRequest message = new SendMessageRequest(myQueueUrl, messageBody)
+                                .addMessageAttributesEntry("id", new MessageAttributeValue().withDataType("String").withStringValue(record.getControlNumber()))
+                                .addMessageAttributesEntry("datasource", new MessageAttributeValue().withDataType("String").withStringValue("sirsi"))
+                                .addMessageAttributesEntry("type", new MessageAttributeValue().withDataType("String").withStringValue("marcinjson"));
+                        sqsx.sendMessage(message);
+                    }
+                }
+            }
+
+            // Send a message.
+       //     System.out.println("Sending a message to MyQueue.\n");
+        //    sqsx.sendMessage(new SendMessageRequest(myQueueUrl,
+        //            "This is my message text.").);
+
+            // Receive messages.
+            System.out.println("Receiving messages from "+ queueName + " \n");
+            final ReceiveMessageRequest receiveMessageRequest =
+                    new ReceiveMessageRequest(myQueueUrl).withMaxNumberOfMessages(10).withMessageAttributeNames("All").withWaitTimeSeconds(2);
+            boolean done = false;
+            int messageCount = 0;
+            for (List<Message> messages = sqsx.receiveMessage(receiveMessageRequest).getMessages(); !done && messages .size() > 0; messages = sqsx.receiveMessage(receiveMessageRequest).getMessages())
+            {
+           // List<Message> messages = sqsx.receiveMessage(receiveMessageRequest).getMessages();
+                for (final Message message : messages) 
+                {
+                    System.out.println("Message");
+                    System.out.println("  MessageId:     " + message.getMessageId());
+                    System.out.println("  ReceiptHandle: " + message.getReceiptHandle());
+                    System.out.println("  MD5OfBody:     " + message.getMD5OfBody());
+                    System.out.println("  Body:          " + message.getBody());
+                    System.out.println("  Body Length:   " + message.getBody().length());
+                    for (final String key : message.getMessageAttributes().keySet())
+                    {
+                        System.out.println("Attribute");
+                        System.out.println("  Name:  " + key);
+                        System.out.println("  Value: " + message.getMessageAttributes().get(key).getStringValue());
+                    }
+                    String messageBody = message.getBody();
+                    String messageType = message.getMessageAttributes().get("type").getStringValue();
+                    if (messageType.equals("marcinjson"))
+                    {
+                        MarcReader jsreader = new MarcJsonReader(new StringReader(messageBody)); 
+                        Record rec_in = jsreader.next();
+                        System.out.println(rec_in.toString());
+                    }
+                    else if (messageType.equals("base64/marc"))
+                    {
+                        byte[] expandedMessageBodyBytes = Base64.decode(messageBody);
+                        MarcReader binreader = new MarcPermissiveStreamReader(new ByteArrayInputStream(expandedMessageBodyBytes), true, true); 
+                        Record rec_in = binreader.next();
+                        System.out.println(rec_in.toString());
+                    }
+                    final String messageReceiptHandle = message.getReceiptHandle();
+                    sqsx.deleteMessage(new DeleteMessageRequest(myQueueUrl, messageReceiptHandle));
+                    done = (messageCount++ > 10);
+                }
+            }
+            System.out.println();
+
+            // Delete the message.
+//            System.out.println("Deleting a message.\n");
+//            final String messageReceiptHandle = messages.get(0).getReceiptHandle();
+//            sqsx.deleteMessage(new DeleteMessageRequest(myQueueUrl,
+//                    messageReceiptHandle));
+
+            // Delete the queue.
+//            System.out.println("Deleting the test queue.\n");
+//            sqsx.deleteQueue(new DeleteQueueRequest(myQueueUrl));
+        } catch (final AmazonServiceException ase) {
+            System.out.println("Caught an AmazonServiceException, which means " +
+                    "your request made it to Amazon SQS, but was " +
+                    "rejected with an error response for some reason.");
+            System.out.println("Error Message:    " + ase.getMessage());
+            System.out.println("HTTP Status Code: " + ase.getStatusCode());
+            System.out.println("AWS Error Code:   " + ase.getErrorCode());
+            System.out.println("Error Type:       " + ase.getErrorType());
+            System.out.println("Request ID:       " + ase.getRequestId());
+        } catch (final AmazonClientException ace) {
+            System.out.println("Caught an AmazonClientException, which means " +
+                    "the client encountered a serious internal problem while " +
+                    "trying to communicate with Amazon SQS, such as not " +
+                    "being able to access the network.");
+            System.out.println("Error Message: " + ace.getMessage());
+        }
+        catch (FileNotFoundException e1)
+        {
+            System.out.println("Unable to open file ");
+            System.out.println("Error Message: " + e1.getMessage());
+        }*/
+    }
+}

@@ -1,0 +1,76 @@
+package org.solrmarc.marc;
+
+import org.apache.log4j.Logger;
+import org.marc4j.MarcException;
+
+import com.amazon.sqs.javamessaging.AmazonSQSExtendedClient;
+import com.amazon.sqs.javamessaging.ExtendedClientConfiguration;
+import com.amazonaws.services.s3.AmazonS3;
+import com.amazonaws.services.s3.AmazonS3ClientBuilder;
+import com.amazonaws.services.sqs.AmazonSQS;
+import com.amazonaws.services.sqs.AmazonSQSClientBuilder;
+import com.amazonaws.services.sqs.model.CreateQueueRequest;
+
+public class AwsSqsSingleton
+{
+    private static boolean alwaysThroughS3 = false;
+    private static final int SQS_SIZE_LIMIT = 262144;
+    private AmazonSQS sqs;
+    private AmazonS3 s3;
+    private final static Logger logger = Logger.getLogger(AwsSqsSingleton.class);
+
+    private static AwsSqsSingleton instance = null;
+    
+    private AwsSqsSingleton() {} ; // private to ensure its a singleton
+    
+    public static AwsSqsSingleton getInstance(String s3BucketName)
+    {
+        if (instance != null) return (instance);
+        AwsSqsSingleton local = new AwsSqsSingleton();
+        AmazonSQS sqstmp = AmazonSQSClientBuilder.defaultClient();
+        if (s3BucketName != null)
+        {
+            local.s3 = AmazonS3ClientBuilder.standard().build();
+            ExtendedClientConfiguration extendedClientConfig = new ExtendedClientConfiguration();
+            extendedClientConfig.withLargePayloadSupportEnabled(local.s3, s3BucketName)
+                .withAlwaysThroughS3(alwaysThroughS3).withMessageSizeThreshold(SQS_SIZE_LIMIT);
+            
+            final AmazonSQSExtendedClient sqsx = new AmazonSQSExtendedClient(sqstmp, extendedClientConfig);
+            local.sqs = sqsx;
+        }
+        else  // Use the normal, non-extended client
+        {
+            local.sqs = sqstmp;
+        }
+        instance = local;
+        return(instance);
+    }
+    
+    public AmazonSQS getSQS()
+    {
+        return(sqs);     
+    }
+    
+    public String getQueueUrlForName(String queueName, boolean createQueueIfNotExists)
+    {
+        logger.debug("Listing all queues in your account.");
+        for (final String queueUrlTmp : sqs.listQueues(queueName).getQueueUrls())
+        {
+            logger.debug("  QueueUrl: " + queueUrlTmp);
+            if (queueUrlTmp.contains(queueName))
+            {
+                return(queueUrlTmp);
+            }
+        }
+        if (createQueueIfNotExists)
+        {
+            logger.debug("Creating a new SQS queue called "+ queueName);
+            final CreateQueueRequest createQueueRequest = new CreateQueueRequest(queueName);
+            String queueUrlTmp = sqs.createQueue(createQueueRequest).getQueueUrl();
+            return (queueUrlTmp);
+        }
+        logger.debug("SQS queue named "+ queueName+ " not found");
+        throw new MarcException("SQS queue named "+ queueName+ " not found");
+    }
+
+}
