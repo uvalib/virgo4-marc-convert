@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8" standalone="no"?>
-<project basedir="." default="build" name="ReadCNHIData">
+<project basedir="." default="build" name="SolrMarc_SQS_Adapter">
     <property environment="env"/>
     <property name="debuglevel" value="source,lines,vars"/>
     <property name="target" value="1.8"/>
@@ -8,7 +8,7 @@
         <fileset dir="lib_solrmarc_install">                                                                                                                          
             <include name="**/*.jar" />                                                                                                          
         </fileset>                                                                                                                                   
-        <fileset dir="lib-aws">                                                                                                                          
+        <fileset dir="lib_aws">                                                                                                                          
             <include name="**/*.jar" />                                                                                                          
         </fileset>                                                                                                                                   
     </path>
