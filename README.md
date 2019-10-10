@@ -6,6 +6,7 @@ This repo contains only the source code required to adapt SolrMarc to read from 
 The jars from a current build of SolrMarc are vendored here. As are the required jars for a current(-ish) version of SolrJ and the necessary jars from AWS Java SDK.
 
 To run the program first set up the necessary AWS environment variables:
+
     export AWS_ACCESS_KEY_ID=<your access key>
     export AWS_SECRET_ACCESS_KEY=<your secret access key>
     export AWS_REGION=us-east-1
@@ -31,9 +32,10 @@ Instead of specifying the input queue name and the output queue name and the s3 
 The program will start, initialize itself, and then read records from the input queue, and write the corresponding solr add doc to the output queue.   If you signal it (or CTRL-C) it will flush out what it is doing, and terminate cleanly.
 
 The system properties defined on the command line have the follow effects:
- * solrmarc.indexer.threadcount  - define the number of indexer threads processing MARC records
- * solrmarc.solrj.threadcount  -  define the number of threads used for writing Solr Add Docs to the output queue
- * solrmarc.indexer.chunksize - define how many records will be handled by each solrj indexer worker
+
+    solrmarc.indexer.threadcount - define the number of indexer threads processing MARC records
+    solrmarc.solrj.threadcount - define the number of threads used for writing add docs to the output queue
+    solrmarc.indexer.chunksize - define how many records will be handled by each solrj indexer worker
  
  The values specified for those properties are far from being optimized.
  
