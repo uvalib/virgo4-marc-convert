@@ -39,3 +39,15 @@ The system properties defined on the command line have the follow effects:
  
  The values specified for those properties are far from being optimized.
  
+ A timing made with the above values reported:
+ 
+     14350 records sent to Solr in 2 minutes 41.10 seconds
+
+ as compared to the batch version which reports:
+ 
+     99967 records sent to Solr in 2 minutes 40.52 seconds
+ 
+ The slowness may be on the input end given the timings are about the same when the records are read in, indexed, and discarded
+ (which can be tested by omitting the -sqs-out  parameter and instead specifying  -u devnull
+ 
+
