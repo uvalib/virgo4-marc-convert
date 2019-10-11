@@ -1,3 +1,6 @@
 /bin/
 /lib_solrmarc_install/index_java/bin/
 /dist/
+tmp
+env.*
+.idea
