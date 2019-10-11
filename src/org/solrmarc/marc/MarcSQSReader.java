@@ -2,7 +2,10 @@ package org.solrmarc.marc;
 
 import java.io.ByteArrayInputStream;
 import java.io.StringReader;
+import java.util.Arrays;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 
 import org.apache.log4j.Logger;
 import org.marc4j.MarcException;
@@ -18,6 +21,7 @@ import com.amazonaws.util.Base64;
 
 public class MarcSQSReader implements MarcReader
 {
+    
     private String queueUrl = null;
     private String queueName; // = "virgo4-ingest-sirsi-inbound-staging";
    // private String s3BucketName; // = "virgo4-ingest-staging-messages";
@@ -27,6 +31,7 @@ public class MarcSQSReader implements MarcReader
     private List<Message> curMessages;
     private int curMessageIndex;
     private AwsSqsSingleton aws_sqs = null;
+    
     private final static Logger logger = Logger.getLogger(MarcSQSReader.class);
     
     public MarcSQSReader(String queueName)
@@ -46,16 +51,14 @@ public class MarcSQSReader implements MarcReader
         init(queueName, s3BucketName);
     }
 
-    
     private void init(String queueName, String s3BucketName)
     {
         this.queueName = queueName;
         
         aws_sqs = AwsSqsSingleton.getInstance(s3BucketName);
         queueUrl = aws_sqs.getQueueUrlForName(this.queueName, createQueueIfNotExists);
-        receiveMessageRequest = new ReceiveMessageRequest(queueUrl).withMaxNumberOfMessages(10).withMessageAttributeNames("All")/*.withWaitTimeSeconds(2) */;
+        receiveMessageRequest = new ReceiveMessageRequest(queueUrl).withMaxNumberOfMessages(10).withMessageAttributeNames("All").withWaitTimeSeconds(20);
     }
-    
 
     @Override
     public boolean hasNext()
@@ -70,13 +73,21 @@ public class MarcSQSReader implements MarcReader
 
     private void fetchMessages()
     {
-        try {
-            curMessages = aws_sqs.getSQS().receiveMessage(receiveMessageRequest).getMessages();
-            curMessageIndex = 0;
-        }
-        catch(com.amazonaws.AbortedException abort)
+        curMessageIndex = -1;
+        while (curMessageIndex == -1 && ! Thread.currentThread().isInterrupted())
         {
-            curMessages = null; 
+            try {
+                curMessages = aws_sqs.getSQS().receiveMessage(receiveMessageRequest).getMessages();
+                if (curMessages.size() > 0)
+                {
+                    curMessageIndex = 0;
+                }
+            }
+            catch(com.amazonaws.AbortedException abort)
+            {
+                curMessages = null;
+                curMessageIndex = 0;
+            }
         }
     }
 
@@ -133,21 +144,12 @@ public class MarcSQSReader implements MarcReader
                 throw new MarcException("Unknown message type "+ messageType);
             }
             logger.trace(rec.toString());
-            if (!Thread.currentThread().isInterrupted())
-            {
-                try {
-                    final String messageReceiptHandle = message.getReceiptHandle();
-                    aws_sqs.getSQS().deleteMessage(new DeleteMessageRequest(queueUrl, messageReceiptHandle));
-                }
-                catch(com.amazonaws.AbortedException abort)
-                {
-                    logger.debug("thread interrupted, not deleting message");
-                }
-            }
-            else
-            {
-                logger.debug("thread interrupted, not deleting message");
-            }
+            
+            String id = message.getMessageAttributes().get("id").getStringValue();
+            final String messageReceiptHandle = message.getReceiptHandle();
+            //  Add message Receipt Handle to a map for later deletion
+            aws_sqs.add(queueUrl, id, messageReceiptHandle);
+            
             return(rec);
         } 
         catch (NullPointerException npe)
@@ -155,28 +157,36 @@ public class MarcSQSReader implements MarcReader
             logger.info("Message missing attrribute \"type\"");
             throw new MarcException("SQS queue named "+ queueName+ " not found");
         }
-        finally // in any case delete the message
-        {
-        }
     }
-    
+        
     public static void main(String[] args)
     {
-        String queueName= "virgo4-ingest-sirsi-inbound-staging";
+        //    -sqs-in "virgo4-ingest-sirsi-marc-ingest-staging"
+        //    -s3 "virgo4-ingest-staging-messages" 
+        String queueName= "virgo4-ingest-sirsi-marc-ingest-staging";
         String s3BucketName = "virgo4-ingest-staging-messages";
-        boolean alwaysThroughS3 = false;
 
         MarcSQSReader reader = new MarcSQSReader(queueName, s3BucketName);
-        boolean done = false;
-        int messageCount = 0;
-        for (int i = 0; i < 15; i++)
+        long start = System.currentTimeMillis();
+        for (int i = 0; i < 1000; )
+        {
+            reader.fetchMessages();
+            i += reader.curMessages.size();
+        }
+        long end = System.currentTimeMillis();
+        System.out.println("Total time (fetch only)= "+ ((1.0 * (end - start)) / 1000.0) + " seconds");
+        
+        start = System.currentTimeMillis();
+        for (int i = 0; i < 1000; i++)
         {
             Record record = reader.next();
-            if (record != null)
-            {
-                System.out.println(record.toString());
-            }
+        //    if (record != null)
+       //     {
+       //         System.out.println(i);
+        //    }
         }
+        end = System.currentTimeMillis();
+        System.out.println("Total time (fetch and convert to MARC)= "+ ((1.0 * (end - start)) / 1000.0) + " seconds");
     }
 
 }

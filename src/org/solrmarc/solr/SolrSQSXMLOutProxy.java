@@ -38,12 +38,14 @@ public class SolrSQSXMLOutProxy extends SolrProxy
 
     public int addDoc(SolrInputDocument inputDoc)
     {
+        String id = inputDoc.getFieldValue("id").toString();
         String xml = ClientUtils.toXML(inputDoc);
         SendMessageRequest message = new SendMessageRequest(queueUrl, xml)
                 .addMessageAttributesEntry("id", new MessageAttributeValue().withDataType("String").withStringValue(inputDoc.getFieldValue("id").toString()))
                 .addMessageAttributesEntry("datasource", new MessageAttributeValue().withDataType("String").withStringValue("solrmarc"))
                 .addMessageAttributesEntry("type", new MessageAttributeValue().withDataType("String").withStringValue("application/xml"));
         aws_sqs.getSQS().sendMessage(message);
+        aws_sqs.remove(queueUrl, id);
         return(1);
     }
 
