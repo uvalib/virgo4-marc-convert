@@ -79,8 +79,8 @@ public class SQSQueueDriver extends IndexDriver
         indexerFactory = ValueIndexerFactory.initialize(homeDirStrs);
         initializeFromOptions();
 
-        String inputQueueName = options.has("sqs-in") ? options.valueOf("sqs-in").toString() : System.getProperty(VIRGO4_MARC_CONVERT_IN_QUEUE);
-        String s3BucketName = options.has("s3") ? options.valueOf("s3").toString() : System.getProperty(VIRGO4_SQS_MESSAGE_BUCKET);
+        String inputQueueName = getSqsParm(options, "sqs-in", VIRGO4_MARC_CONVERT_IN_QUEUE);
+        String s3BucketName = getSqsParm(options, "s3", VIRGO4_SQS_MESSAGE_BUCKET);
         logger.info("Opening input queue: "+ inputQueueName);
         this.configureReader(inputQueueName, s3BucketName);
         
@@ -111,7 +111,7 @@ public class SQSQueueDriver extends IndexDriver
             System.exit(1);
         }
 
-        String sqsOutQueue = getSqsOutQueue(options);
+        String sqsOutQueue = getSqsParm(options, "sqs-out", VIRGO4_MARC_CONVERT_OUT_QUEUE);
         boolean multithread =  sqsOutQueue != null && !options.has("debug") ? true : false;
         try
         {
@@ -145,10 +145,13 @@ public class SQSQueueDriver extends IndexDriver
         }
     }
 
-    private String getSqsOutQueue(OptionSet options)
+    private String getSqsParm(OptionSet options, String clOptName, String propertyOrEnvName)
     {
-        return (options.has("sqs-out") ? options.valueOf("sqs-out").toString() : System.getProperty(VIRGO4_MARC_CONVERT_OUT_QUEUE));
+        return (options.has(clOptName) ? options.valueOf(clOptName).toString() : 
+            System.getProperty(propertyOrEnvName)!= null ?  System.getProperty(propertyOrEnvName) :
+                System.getenv(propertyOrEnvName));
     }
+
 
     final static String [] solrmarcPropertyStrings = {
             "solrmarc.indexer.chunksize",
@@ -209,8 +212,8 @@ public class SQSQueueDriver extends IndexDriver
     {
         String solrJClassName = solrjClass.value(options);
         String solrURL = options.has("solrURL") ? options.valueOf("solrURL").toString() : options.has("null") ? "devnull" : "stdout";
-        String s3Bucket = options.has("s3") ? options.valueOf("s3").toString() : System.getProperty(VIRGO4_MARC_CONVERT_OUT_QUEUE);
-        String  sqsOutQueue = getSqsOutQueue(options);
+        String sqsOutQueue = getSqsParm(options, "sqs-out", VIRGO4_MARC_CONVERT_OUT_QUEUE);
+        String s3Bucket = options.has("s3") ? options.valueOf("s3").toString() : System.getProperty(VIRGO4_SQS_MESSAGE_BUCKET);
         if (sqsOutQueue != null)
         {
             solrProxy = new SolrSQSXMLOutProxy(sqsOutQueue, s3Bucket);
