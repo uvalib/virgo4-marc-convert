@@ -10,6 +10,8 @@ import com.amazonaws.services.s3.AmazonS3ClientBuilder;
 import com.amazonaws.services.sqs.AmazonSQS;
 import com.amazonaws.services.sqs.AmazonSQSClientBuilder;
 import com.amazonaws.services.sqs.model.CreateQueueRequest;
+import com.amazonaws.services.sqs.model.CreateQueueResult;
+import com.amazonaws.services.sqs.model.GetQueueUrlResult;
 
 public class AwsSqsSingleton
 {
@@ -54,20 +56,20 @@ public class AwsSqsSingleton
     public String getQueueUrlForName(String queueName, boolean createQueueIfNotExists)
     {
         logger.debug("Listing all queues in your account.");
-        for (final String queueUrlTmp : sqs.listQueues(queueName).getQueueUrls())
+        GetQueueUrlResult queueUrlResult = sqs.getQueueUrl(queueName);
+        if (queueUrlResult != null)
         {
-            logger.debug("  QueueUrl: " + queueUrlTmp);
-            if (queueUrlTmp.contains(queueName))
-            {
-                return(queueUrlTmp);
-            }
+            return (queueUrlResult.getQueueUrl());
         }
         if (createQueueIfNotExists)
         {
             logger.debug("Creating a new SQS queue called "+ queueName);
             final CreateQueueRequest createQueueRequest = new CreateQueueRequest(queueName);
-            String queueUrlTmp = sqs.createQueue(createQueueRequest).getQueueUrl();
-            return (queueUrlTmp);
+            CreateQueueResult createResult = sqs.createQueue(createQueueRequest);
+            if (createResult != null) 
+            {
+                return (createResult.getQueueUrl());
+            }
         }
         logger.debug("SQS queue named "+ queueName+ " not found");
         throw new MarcException("SQS queue named "+ queueName+ " not found");
