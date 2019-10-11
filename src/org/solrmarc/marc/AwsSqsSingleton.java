@@ -1,6 +1,9 @@
 package org.solrmarc.marc;
 
+import java.util.ArrayList;
+import java.util.Iterator;
 import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Map;
 
 import org.apache.log4j.Logger;
@@ -14,7 +17,12 @@ import com.amazonaws.services.sqs.AmazonSQS;
 import com.amazonaws.services.sqs.AmazonSQSClientBuilder;
 import com.amazonaws.services.sqs.model.CreateQueueRequest;
 import com.amazonaws.services.sqs.model.CreateQueueResult;
+import com.amazonaws.services.sqs.model.DeleteMessageBatchRequest;
+import com.amazonaws.services.sqs.model.DeleteMessageBatchRequestEntry;
+import com.amazonaws.services.sqs.model.DeleteMessageBatchResult;
+import com.amazonaws.services.sqs.model.DeleteMessageBatchResultEntry;
 import com.amazonaws.services.sqs.model.DeleteMessageRequest;
+import com.amazonaws.services.sqs.model.DeleteMessageResult;
 import com.amazonaws.services.sqs.model.GetQueueUrlResult;
 
 public class AwsSqsSingleton
@@ -23,7 +31,17 @@ public class AwsSqsSingleton
     private static final int SQS_SIZE_LIMIT = 262144;
     private AmazonSQS sqs;
     private AmazonS3 s3;
-    private Map<String, String> recHandleMap = null;
+    private Map<String, MapEntry> recHandleMap = null;
+    
+    private class MapEntry {
+        String queueUrl;
+        String messageHandle;
+        public MapEntry(String queueUrl, String messageHandle)
+        {
+            this.queueUrl = queueUrl;
+            this.messageHandle = messageHandle;
+        }
+    };
     
     private final static Logger logger = Logger.getLogger(AwsSqsSingleton.class);
 
@@ -50,7 +68,7 @@ public class AwsSqsSingleton
         {
             local.sqs = sqstmp;
         }
-        local.recHandleMap = new LinkedHashMap<String, String>();
+        local.recHandleMap = new LinkedHashMap<String, MapEntry>();
         instance = local;
         return(instance);
     }
@@ -84,28 +102,59 @@ public class AwsSqsSingleton
     
     public void add(String queueUrl, String id, String messageHandle)
     {
-        String key = queueUrl + id;
+        String key = id;
         if (recHandleMap.containsKey(key))
         {
             logger.warn("Already Have a stored message handle with id "+ id + " in queue " + queueUrl + " deleting the existing one!!!");
-            String messageReceiptHandle = recHandleMap.get(key);
-            getSQS().deleteMessage(new DeleteMessageRequest(queueUrl, messageReceiptHandle));
+            MapEntry mapEntry = recHandleMap.get(key);
+            getSQS().deleteMessage(new DeleteMessageRequest(mapEntry.queueUrl, mapEntry.messageHandle));
         }
-        recHandleMap.put(key,  messageHandle);
+        recHandleMap.put(key, new MapEntry(queueUrl, messageHandle));
     }
     
-    public void remove(String queueUrl, String id)
+    public void remove(String id)
     {
-        String key = queueUrl + id;
+        String key = id;
         if (!recHandleMap.containsKey(key))
         {
-            logger.warn("Do not have a stored message handle with id "+ id + " in queue " + queueUrl );
+            logger.warn("Do not have a stored message handle with id "+ id  );
         }
         else 
         {
-            String messageReceiptHandle = recHandleMap.get(key);
-            getSQS().deleteMessage(new DeleteMessageRequest(queueUrl, messageReceiptHandle));
+            MapEntry mapEntry = recHandleMap.get(key);
+            getSQS().deleteMessage(new DeleteMessageRequest(mapEntry.queueUrl, mapEntry.messageHandle));
             recHandleMap.remove(key);
+        }
+    }
+
+    public void removeBatch(List<String> deleteBatchIds)
+    {
+        Iterator<String> iter = deleteBatchIds.iterator();
+        while (iter.hasNext())
+        {
+            List<DeleteMessageBatchRequestEntry> toDelete = new ArrayList<DeleteMessageBatchRequestEntry>(10);
+            String queueUrl = null;
+            for (int i = 0; i < 10 && iter.hasNext(); i++)
+            {
+                String id = iter.next();
+                String key = id;
+                if (!recHandleMap.containsKey(key))
+                {
+                    logger.warn("Do not have a stored message handle with id "+ id );
+                }
+                else 
+                {
+                    MapEntry mapEntry = recHandleMap.get(key);
+                    toDelete.add(new DeleteMessageBatchRequestEntry(id, mapEntry.messageHandle));
+                    queueUrl = mapEntry.queueUrl;
+                }
+            }
+            DeleteMessageBatchResult res = getSQS().deleteMessageBatch(new DeleteMessageBatchRequest(queueUrl).withEntries(toDelete));
+            for (DeleteMessageBatchResultEntry success : res.getSuccessful())
+            {
+                String key = success.getId();
+                recHandleMap.remove(key);
+            }
         }
     }
 }
