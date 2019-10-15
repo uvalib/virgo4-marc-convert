@@ -84,7 +84,7 @@ public class MarcSQSReader implements MarcReader
                 }
                 else // timed out without finding any records.   If there is a partial chunk waiting to be sent, flush it out.
                 {
-   //                 readerIdle = true;
+                    logger.info("Read queue " + this.queueName + " is empty. Waiting for more records");
                 }
             }
             catch(com.amazonaws.AbortedException abort)
@@ -149,7 +149,7 @@ public class MarcSQSReader implements MarcReader
             }
             else
             {
-                logger.info("Unknown message type "+ messageType);
+                logger.warn("Unknown message type "+ messageType);
                 throw new MarcException("Unknown message type "+ messageType);
             }
             logger.trace(rec.toString());
@@ -163,7 +163,7 @@ public class MarcSQSReader implements MarcReader
         } 
         catch (NullPointerException npe)
         {
-            logger.info("Message missing attrribute \"type\"");
+            logger.warn("Message missing attrribute \"type\"");
             throw new MarcException("SQS queue named "+ queueName+ " not found");
         }
     }
