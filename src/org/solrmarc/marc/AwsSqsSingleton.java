@@ -22,24 +22,26 @@ import com.amazonaws.services.sqs.model.DeleteMessageBatchRequestEntry;
 import com.amazonaws.services.sqs.model.DeleteMessageBatchResult;
 import com.amazonaws.services.sqs.model.DeleteMessageBatchResultEntry;
 import com.amazonaws.services.sqs.model.DeleteMessageRequest;
-import com.amazonaws.services.sqs.model.DeleteMessageResult;
 import com.amazonaws.services.sqs.model.GetQueueUrlResult;
 
 public class AwsSqsSingleton
 {
     private static boolean alwaysThroughS3 = false;
-    private static final int SQS_SIZE_LIMIT = 262144;
+    public static final int SQS_SIZE_LIMIT = 262144;
     private AmazonSQS sqs;
     private AmazonS3 s3;
+    private boolean shutdown = false;
     private Map<String, MapEntry> recHandleMap = null;
     
     private class MapEntry {
         String queueUrl;
         String messageHandle;
+        MapEntry chain;
         public MapEntry(String queueUrl, String messageHandle)
         {
             this.queueUrl = queueUrl;
             this.messageHandle = messageHandle;
+            this.chain = null;
         }
     };
     
@@ -103,30 +105,63 @@ public class AwsSqsSingleton
     public void add(String queueUrl, String id, String messageHandle)
     {
         String key = id;
-        if (recHandleMap.containsKey(key))
+        synchronized (recHandleMap) 
         {
-            logger.warn("Already Have a stored message handle with id "+ id + " in queue " + queueUrl + " deleting the existing one!!!");
-            MapEntry mapEntry = recHandleMap.get(key);
-            getSQS().deleteMessage(new DeleteMessageRequest(mapEntry.queueUrl, mapEntry.messageHandle));
+            if (recHandleMap.containsKey(key))
+            {
+                logger.warn("Already Have a stored message handle with id "+ id + " in queue " + queueUrl + " chaining existing one");
+                
+                MapEntry existing = recHandleMap.get(key);
+                while (existing.chain != null)
+                {
+                    existing = existing.chain;
+                }
+                existing.chain = new MapEntry(queueUrl, messageHandle);
+               // getSQS().deleteMessage(new DeleteMessageRequest(mapEntry.queueUrl, mapEntry.messageHandle));
+            }
+            else 
+            {
+                recHandleMap.put(key, new MapEntry(queueUrl, messageHandle));
+            }
         }
-        recHandleMap.put(key, new MapEntry(queueUrl, messageHandle));
     }
     
     public void remove(String id)
     {
         String key = id;
-        if (!recHandleMap.containsKey(key))
+        MapEntry entry = getRecHandleToDelete(key);
+        if (entry != null)
         {
-            logger.warn("Do not have a stored message handle with id "+ id  );
-        }
-        else 
-        {
-            MapEntry mapEntry = recHandleMap.get(key);
-            getSQS().deleteMessage(new DeleteMessageRequest(mapEntry.queueUrl, mapEntry.messageHandle));
-            recHandleMap.remove(key);
+            getSQS().deleteMessage(new DeleteMessageRequest(entry.queueUrl, entry.messageHandle));            
         }
     }
 
+    private MapEntry getRecHandleToDelete(String key)
+    {
+        MapEntry mapEntry = null;
+        synchronized (recHandleMap) 
+        {
+            if (!recHandleMap.containsKey(key))
+            {
+                logger.warn("Do not have a stored message handle with id "+ key  );
+            }
+            else 
+            {
+                mapEntry = recHandleMap.get(key);
+                MapEntry chained = mapEntry.chain;
+                if (chained == null)
+                {
+                    recHandleMap.remove(key);
+                }
+                else
+                {
+                    recHandleMap.put(key,  chained);
+                }
+            }
+        }
+        return(mapEntry);
+    }
+    
     public void removeBatch(List<String> deleteBatchIds)
     {
         Iterator<String> iter = deleteBatchIds.iterator();
@@ -138,23 +173,23 @@ public class AwsSqsSingleton
             {
                 String id = iter.next();
                 String key = id;
-                if (!recHandleMap.containsKey(key))
+                MapEntry entry = getRecHandleToDelete(key);
+                if (entry != null)
                 {
-                    logger.warn("Do not have a stored message handle with id "+ id );
-                }
-                else 
-                {
-                    MapEntry mapEntry = recHandleMap.get(key);
-                    toDelete.add(new DeleteMessageBatchRequestEntry(id, mapEntry.messageHandle));
-                    queueUrl = mapEntry.queueUrl;
+                    toDelete.add(new DeleteMessageBatchRequestEntry(id, entry.messageHandle));
+                    queueUrl = entry.queueUrl;
                 }
             }
             DeleteMessageBatchResult res = getSQS().deleteMessageBatch(new DeleteMessageBatchRequest(queueUrl).withEntries(toDelete));
-            for (DeleteMessageBatchResultEntry success : res.getSuccessful())
-            {
-                String key = success.getId();
-                recHandleMap.remove(key);
-            }
+        }
+    }
+
+    public void shutdown()
+    {
+        if (!shutdown) 
+        {
+            sqs.shutdown();
+            shutdown = true;
         }
     }
 }

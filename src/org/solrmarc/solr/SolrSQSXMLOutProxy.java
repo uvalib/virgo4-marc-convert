@@ -60,16 +60,24 @@ public class SolrSQSXMLOutProxy extends SolrProxy
     public int addDocs(Collection<SolrInputDocument> docQ)
     {
         Iterator <SolrInputDocument> iter = docQ.iterator();
+        PushbackIterator<SolrInputDocument> pbIter = PushbackIterator.pushbackIterator(iter);
         int num = 0;
+        int messageBatchSize = 0;
         while (iter.hasNext())
         {
             List<SendMessageBatchRequestEntry> messageBatchReq = new ArrayList<SendMessageBatchRequestEntry>(10);
             List<String> deleteBatchIds = new ArrayList<String>(10);
             for (int i = 0; i < 10 && iter.hasNext(); i++)
             {
-                SolrInputDocument inputDoc = iter.next();
-                String id = inputDoc.getFieldValue("id").toString();
+                SolrInputDocument inputDoc = pbIter.next();
                 String xml = ClientUtils.toXML(inputDoc);
+                if (i > 0 && messageBatchSize + xml.length() >= AwsSqsSingleton.SQS_SIZE_LIMIT)
+                {
+                    logger.debug("Message batch would be too large, only sending " + (i + 1) + " messages in batch");
+                    pbIter.pushback(inputDoc);
+                    break;
+                }
+                String id = inputDoc.getFieldValue("id").toString();
                 SendMessageBatchRequestEntry messageReq = new SendMessageBatchRequestEntry(queueUrl, xml)
                         .withId(id)
                         .addMessageAttributesEntry("id", new MessageAttributeValue().withDataType("String").withStringValue(id))
@@ -77,6 +85,7 @@ public class SolrSQSXMLOutProxy extends SolrProxy
                         .addMessageAttributesEntry("type", new MessageAttributeValue().withDataType("String").withStringValue("application/xml"));
                 messageBatchReq.add(messageReq);
                 num++;
+                messageBatchSize += xml.length();
             }
             SendMessageBatchRequest sendBatchRequest = new SendMessageBatchRequest().withQueueUrl(queueUrl)
                     .withEntries(messageBatchReq);
