@@ -155,6 +155,7 @@ public class SQSQueueDriver extends IndexDriver
 
     final static String [] solrmarcPropertyStrings = {
             "solrmarc.indexer.chunksize",
+            "solrmarc.indexer.buffersize",
             "solrmarc.indexer.threadcount",
             "solrmarc.solrj.threadcount",
             "solrmarc.track.solr.progress",
@@ -176,6 +177,10 @@ public class SQSQueueDriver extends IndexDriver
             {
                 String propertyName = iter.nextElement().toString();
                 if (propertyName.startsWith("solrmarc.") && propertyStringsToCopy.contains(propertyName) && System.getProperty(propertyName) == null)
+                {
+                    System.setProperty(propertyName, readerProps.getProperty(propertyName));
+                }
+                if (propertyName.startsWith("org.marc4j.marc") && System.getProperty(propertyName) == null)
                 {
                     System.setProperty(propertyName, readerProps.getProperty(propertyName));
                 }

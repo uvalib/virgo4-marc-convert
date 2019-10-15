@@ -28,7 +28,6 @@ public class MarcSQSReader implements MarcReader
     ReceiveMessageRequest receiveMessageRequest;
     private boolean createQueueIfNotExists = false;
     private boolean destroyQueueAtEnd = false;
-    private boolean readerIdle = false;
     private List<Message> curMessages;
     private int curMessageIndex;
     private AwsSqsSingleton aws_sqs = null;
@@ -82,11 +81,10 @@ public class MarcSQSReader implements MarcReader
                 if (curMessages.size() > 0)
                 {
                     curMessageIndex = 0;
-                    readerIdle = false;
                 }
                 else // timed out without finding any records.   If there is a partial chunk waiting to be sent, flush it out.
                 {
-                    readerIdle = true;
+   //                 readerIdle = true;
                 }
             }
             catch(com.amazonaws.AbortedException abort)
@@ -95,13 +93,13 @@ public class MarcSQSReader implements MarcReader
                 curMessageIndex = 0;
             }
         }
+        if (Thread.currentThread().isInterrupted())
+        {
+            curMessages = null;
+            curMessageIndex = 0;
+        }
     }
     
-    public boolean isReaderIdle()
-    {
-        return readerIdle;
-    }
-
     @Override
     public Record next()
     {
@@ -117,11 +115,6 @@ public class MarcSQSReader implements MarcReader
         }
     }
 
-    public void shutdown()
-    {
-        aws_sqs.shutdown();
-    }
-    
     private Record processMessageToRecord(Message message)
     {
         Record rec;
