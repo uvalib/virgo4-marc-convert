@@ -71,13 +71,15 @@ public class SolrSQSXMLOutProxy extends SolrProxy
             {
                 SolrInputDocument inputDoc = pbIter.next();
                 String xml = ClientUtils.toXML(inputDoc);
-                if (i > 0 && messageBatchSize + xml.length() >= AwsSqsSingleton.SQS_SIZE_LIMIT)
+                String id = inputDoc.getFieldValue("id").toString();
+                // The attributes here must be the same (is size at least) as those added below
+                int curMessageSize = getTotalMessageSize(xml, "id", id, "datasource", "solrmarc", "type", "application/xml");
+                if (i > 0 && messageBatchSize + curMessageSize >= AwsSqsSingleton.SQS_SIZE_LIMIT)
                 {
-                    logger.debug("Message batch would be too large, only sending " + (i + 1) + " messages in batch");
+                    logger.info("Message batch would be too large, only sending " + (i + 1) + " messages in batch");
                     pbIter.pushback(inputDoc);
                     break;
                 }
-                String id = inputDoc.getFieldValue("id").toString();
                 SendMessageBatchRequestEntry messageReq = new SendMessageBatchRequestEntry(queueUrl, xml)
                         .withId(id)
                         .addMessageAttributesEntry("id", new MessageAttributeValue().withDataType("String").withStringValue(id))
@@ -85,18 +87,35 @@ public class SolrSQSXMLOutProxy extends SolrProxy
                         .addMessageAttributesEntry("type", new MessageAttributeValue().withDataType("String").withStringValue("application/xml"));
                 messageBatchReq.add(messageReq);
                 num++;
-                messageBatchSize += xml.length();
+                messageBatchSize += curMessageSize;
             }
             SendMessageBatchRequest sendBatchRequest = new SendMessageBatchRequest().withQueueUrl(queueUrl)
                     .withEntries(messageBatchReq);
-            SendMessageBatchResult result = aws_sqs.getSQS().sendMessageBatch(sendBatchRequest);
-            for (SendMessageBatchResultEntry success : result.getSuccessful())
-            {
-                deleteBatchIds.add(success.getId());
+            try {
+                SendMessageBatchResult result = aws_sqs.getSQS().sendMessageBatch(sendBatchRequest);
+                for (SendMessageBatchResultEntry success : result.getSuccessful())
+                {
+                    deleteBatchIds.add(success.getId());
+                }
+                aws_sqs.removeBatch(deleteBatchIds);   
             }
-            aws_sqs.removeBatch(deleteBatchIds);   
+            catch (com.amazonaws.services.sqs.model.BatchRequestTooLongException tooBig)
+            {
+                logger.warn("Amazon sez I cannot handle that batch, it is too big. Perhaps I could handle a smaller one though.");
+                logger.warn("My computed batch size was "+ messageBatchSize, tooBig);
+           }
         }
         return(num);
+    }
+
+    private int getTotalMessageSize(String message, String ... attributes)
+    {
+        int len = message.length();
+        for (String attribute : attributes)
+        {
+            len += attribute.length() + 3;
+        }
+        return(len);
     }
 
     @Override
