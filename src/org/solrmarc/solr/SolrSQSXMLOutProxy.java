@@ -63,25 +63,29 @@ public class SolrSQSXMLOutProxy extends SolrProxy
         PushbackIterator<SolrInputDocument> pbIter = PushbackIterator.pushbackIterator(iter);
         int num = 0;
         int messageBatchSize = 0;
+        SendMessageBatchRequestEntry messageReq;
+        String messageSizes[];
+        int i;
         while (iter.hasNext())
         {
             List<SendMessageBatchRequestEntry> messageBatchReq = new ArrayList<SendMessageBatchRequestEntry>(10);
             List<String> deleteBatchIds = new ArrayList<String>(10);
-            for (int i = 0; i < 10 && iter.hasNext(); i++)
+            messageSizes = new String[10];
+            for (i = 0; i < 10 && iter.hasNext(); i++)
             {
                 SolrInputDocument inputDoc = pbIter.next();
                 String xml = ClientUtils.toXML(inputDoc);
                 String id = inputDoc.getFieldValue("id").toString();
-                // The attributes here must be the same (is size at least) as those added below
-                int curMessageSize = getTotalMessageSize(xml, "id", id, "datasource", "solrmarc", "type", "application/xml");
+                // The attributes here must be the same (is size at least) as those added below note id is include twice since it is used as an attribute and as the batch id
+                int curMessageSize = getTotalMessageSize(xml, id, "id", id, "datasource", "solrmarc", "type", "application/xml");
                 if (i > 0 && messageBatchSize + curMessageSize >= AwsSqsSingleton.SQS_SIZE_LIMIT)
                 {
                     logger.info("Message batch would be too large, only sending " + (i + 1) + " messages in batch");
                     pbIter.pushback(inputDoc);
                     break;
                 }
-                SendMessageBatchRequestEntry messageReq = new SendMessageBatchRequestEntry(queueUrl, xml)
-                        .withId(id)
+                messageSizes[i] = id + " : " + curMessageSize;
+                messageReq = new SendMessageBatchRequestEntry(queueUrl, xml).withId(id)
                         .addMessageAttributesEntry("id", new MessageAttributeValue().withDataType("String").withStringValue(id))
                         .addMessageAttributesEntry("datasource", new MessageAttributeValue().withDataType("String").withStringValue("solrmarc"))
                         .addMessageAttributesEntry("type", new MessageAttributeValue().withDataType("String").withStringValue("application/xml"));
@@ -102,15 +106,20 @@ public class SolrSQSXMLOutProxy extends SolrProxy
             catch (com.amazonaws.services.sqs.model.BatchRequestTooLongException tooBig)
             {
                 logger.warn("Amazon sez I cannot handle that batch, it is too big. Perhaps I could handle a smaller one though.");
+                for (int j = 0; j < i; j++)
+                {
+                    logger.warn("message : "+ messageSizes[j]);
+                }
                 logger.warn("My computed batch size was "+ messageBatchSize, tooBig);
            }
         }
         return(num);
     }
 
-    private int getTotalMessageSize(String message, String ... attributes)
+    private int getTotalMessageSize(String message, String batchId, String ... attributes)
     {
         int len = message.length();
+       // len += batchId.length();
         for (String attribute : attributes)
         {
             len += attribute.length() + 3;
