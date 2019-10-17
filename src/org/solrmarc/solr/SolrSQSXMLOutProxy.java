@@ -35,6 +35,13 @@ public class SolrSQSXMLOutProxy extends SolrProxy
         init(queueName, s3BucketName);
     }
     
+    public SolrSQSXMLOutProxy(String queueName, String s3BucketName, boolean createQueue)
+    {
+        this.queueName = queueName;
+        this.createQueueIfNotExists = createQueue;
+        init(queueName, s3BucketName);
+    }
+    
     private void init(String queueName, String s3BucketName)
     {
         this.queueName = queueName;
@@ -62,16 +69,18 @@ public class SolrSQSXMLOutProxy extends SolrProxy
         Iterator <SolrInputDocument> iter = docQ.iterator();
         PushbackIterator<SolrInputDocument> pbIter = PushbackIterator.pushbackIterator(iter);
         int num = 0;
-        int messageBatchSize = 0;
+        int messageBatchSize;
         SendMessageBatchRequestEntry messageReq;
         String messageSizes[];
         int i;
-        while (iter.hasNext())
+        boolean oversizeOnly = Boolean.parseBoolean(System.getProperty("solrmarc-sqs-oversize-only", "false"));
+        while (pbIter.hasNext())
         {
             List<SendMessageBatchRequestEntry> messageBatchReq = new ArrayList<SendMessageBatchRequestEntry>(10);
             List<String> deleteBatchIds = new ArrayList<String>(10);
+            messageBatchSize = 0;
             messageSizes = new String[10];
-            for (i = 0; i < 10 && iter.hasNext(); i++)
+            for (i = 0; i < 10 && pbIter.hasNext(); i++)
             {
                 SolrInputDocument inputDoc = pbIter.next();
                 String xml = ClientUtils.toXML(inputDoc);
@@ -93,6 +102,7 @@ public class SolrSQSXMLOutProxy extends SolrProxy
                 num++;
                 messageBatchSize += curMessageSize;
             }
+            if (oversizeOnly && ( i > 1 || messageBatchSize < AwsSqsSingleton.SQS_SIZE_LIMIT))  continue;
             SendMessageBatchRequest sendBatchRequest = new SendMessageBatchRequest().withQueueUrl(queueUrl)
                     .withEntries(messageBatchReq);
             try {
@@ -111,7 +121,11 @@ public class SolrSQSXMLOutProxy extends SolrProxy
                     logger.warn("message : "+ messageSizes[j]);
                 }
                 logger.warn("My computed batch size was "+ messageBatchSize, tooBig);
-           }
+            }
+        }
+        if (num < docQ.size()) 
+        {
+            logger.debug("Not all queued documents sent");
         }
         return(num);
     }

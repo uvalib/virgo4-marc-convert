@@ -219,12 +219,13 @@ public class SQSQueueDriver extends IndexDriver
         String solrURL = options.has("solrURL") ? options.valueOf("solrURL").toString() : options.has("null") ? "devnull" : "stdout";
         String sqsOutQueue = getSqsParm(options, "sqs-out", VIRGO4_MARC_CONVERT_OUT_QUEUE);
         String s3Bucket = getSqsParm(options, "s3", VIRGO4_SQS_MESSAGE_BUCKET);
+        boolean oversizeOnly = Boolean.parseBoolean(System.getProperty("solrmarc-sqs-oversize-only", "false"));
         
         logger.info("Opening output queue: "+ sqsOutQueue + ((s3Bucket != null) ? " (with S3 bucket: "+ s3Bucket + " )" : ""));
 
         if (sqsOutQueue != null)
         {
-            solrProxy = new SolrSQSXMLOutProxy(sqsOutQueue, s3Bucket);
+            solrProxy = new SolrSQSXMLOutProxy(sqsOutQueue, s3Bucket, oversizeOnly);
         }
         else if (solrURL.equals("stdout"))
         {

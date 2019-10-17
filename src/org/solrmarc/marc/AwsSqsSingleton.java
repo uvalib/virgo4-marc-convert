@@ -23,6 +23,7 @@ import com.amazonaws.services.sqs.model.DeleteMessageBatchResult;
 import com.amazonaws.services.sqs.model.DeleteMessageBatchResultEntry;
 import com.amazonaws.services.sqs.model.DeleteMessageRequest;
 import com.amazonaws.services.sqs.model.GetQueueUrlResult;
+import com.amazonaws.services.sqs.model.QueueDoesNotExistException;
 
 public class AwsSqsSingleton
 {
@@ -83,23 +84,30 @@ public class AwsSqsSingleton
     public String getQueueUrlForName(String queueName, boolean createQueueIfNotExists)
     {
         logger.debug("Listing all queues in your account.");
-        GetQueueUrlResult queueUrlResult = sqs.getQueueUrl(queueName);
-        if (queueUrlResult != null)
-        {
-            return (queueUrlResult.getQueueUrl());
-        }
-        if (createQueueIfNotExists)
-        {
-            logger.debug("Creating a new SQS queue called "+ queueName);
-            final CreateQueueRequest createQueueRequest = new CreateQueueRequest(queueName);
-            CreateQueueResult createResult = sqs.createQueue(createQueueRequest);
-            if (createResult != null) 
+        try { 
+            GetQueueUrlResult queueUrlResult = sqs.getQueueUrl(queueName);
+            if (queueUrlResult != null)
             {
-                return (createResult.getQueueUrl());
+                return (queueUrlResult.getQueueUrl());
             }
+            logger.debug("SQS queue named "+ queueName+ " not found");
+            throw new MarcException("SQS queue named "+ queueName+ " not found");
         }
-        logger.debug("SQS queue named "+ queueName+ " not found");
-        throw new MarcException("SQS queue named "+ queueName+ " not found");
+        catch (QueueDoesNotExistException NoQ)
+        {
+            if (createQueueIfNotExists)
+            {
+                logger.debug("Creating a new SQS queue called "+ queueName);
+                final CreateQueueRequest createQueueRequest = new CreateQueueRequest(queueName);
+                CreateQueueResult createResult = sqs.createQueue(createQueueRequest);
+                if (createResult != null) 
+                {
+                    return (createResult.getQueueUrl());
+                }
+            }
+            logger.debug("SQS queue named "+ queueName+ " not found");
+            throw new MarcException("SQS queue named "+ queueName+ " not found");
+        }
     }
     
     public void add(String queueUrl, String id, String messageHandle)
