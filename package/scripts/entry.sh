@@ -7,8 +7,8 @@ java -Dsolrmarc.track.solr.progress=false \
      -Dsolrmarc.solrj.threadcount=$VIRGO4_MARC_CONVERT_SOLRJ_WORKERS \
      -Dsolrmarc.indexer.chunksize=10 \
      -Dsolrmarc.track.progress=5000 \
-     -classpath dist/marcsqs_reader.jar:lib_solrmarc_install/solrmarc_core_3.3-10-gfc4f937-SNAPSHOT.jar org.solrmarc.driver.Boot SQSQueueDriver  \
-     -dir . 
+     -classpath dist/marcsqs_reader.jar:lib_solrmarc_install/solrmarc_core_3.3-10-gfc4f937-SNAPSHOT.jar org.solrmarc.driver.Boot SQSQueueDriver \
+     -dir . \
      -config solr7_index.properties,rda_index_and_maps.properties,available_index.properties
 
 #
