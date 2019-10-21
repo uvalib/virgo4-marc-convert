@@ -265,7 +265,11 @@ public class CustomLocationMixin extends SolrIndexerMixin
                 Object field = iter.next();
                 DataField df = (DataField) field;
                 String barcode = df.getSubfield('i') != null ? df.getSubfield('i').getData() : "";
-                if (extraString != null && extraString.contains("|" + barcode + "|"))
+                if (df.getSubfield('3') != null) 
+                {
+                    iter.remove();
+                }
+                else if (extraString != null && extraString.contains("|" + barcode + "|"))
                 {
                     iter.remove();
                 }
