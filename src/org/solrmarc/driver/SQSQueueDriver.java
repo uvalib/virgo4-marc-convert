@@ -9,6 +9,7 @@ import java.util.Enumeration;
 import java.util.List;
 import java.util.Properties;
 import org.apache.log4j.Logger;
+import org.marc4j.MarcReaderConfig;
 import org.solrmarc.index.indexer.IndexerSpecException;
 import org.solrmarc.index.indexer.ValueIndexerFactory;
 import org.solrmarc.marc.MarcSQSReader;
@@ -93,6 +94,10 @@ public class SQSQueueDriver extends IndexDriver
         parser.accepts("sqs-in", "sqs queue to read records from").withRequiredArg().ofType( String.class );
         parser.accepts("sqs-out", "sqs queue to write solr docs to").withRequiredArg().ofType( String.class );
         parser.accepts("s3", "s3 bucket to use for oversize records").withRequiredArg().ofType( String.class );
+        if (System.getProperty("solrmarc.indexer.test.fire.method","undefined").equals("undefined"))
+        {
+            System.setProperty("solrmarc.indexer.test.fire.method", "true");
+        }
     }
     
     private void initializeFromOptions()
@@ -185,13 +190,13 @@ public class SQSQueueDriver extends IndexDriver
                     System.setProperty(propertyName, readerProps.getProperty(propertyName));
                 }
             }
-//            try {
-//                readerConfig = new MarcReaderConfig(readerProps);
-//            }
-//            catch(NoClassDefFoundError ncdfe)
-//            {
-//                readerConfig = null;
-//            }
+            try {
+                readerConfig = new MarcReaderConfig(readerProps);
+            }
+            catch(NoClassDefFoundError ncdfe)
+            {
+                readerConfig = null;
+            }
         }
     }
 
@@ -199,7 +204,7 @@ public class SQSQueueDriver extends IndexDriver
     {
         try
         {
-            reader = new MarcSQSReader(inputQueueName, s3BucketName);
+            reader = new MarcSQSReader(readerConfig, inputQueueName, s3BucketName);
         }
 //        catch (IOException e)
 //        {

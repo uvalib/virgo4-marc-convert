@@ -1,6 +1,7 @@
 package org.solrmarc.marc;
 
 import java.io.ByteArrayInputStream;
+import java.io.IOException;
 import java.io.StringReader;
 import java.util.Arrays;
 import java.util.LinkedHashMap;
@@ -12,6 +13,8 @@ import org.marc4j.MarcException;
 import org.marc4j.MarcJsonReader;
 import org.marc4j.MarcPermissiveStreamReader;
 import org.marc4j.MarcReader;
+import org.marc4j.MarcReaderConfig;
+import org.marc4j.MarcReaderFactory;
 import org.marc4j.marc.Record;
 
 import com.amazonaws.services.sqs.model.DeleteMessageRequest;
@@ -31,29 +34,31 @@ public class MarcSQSReader implements MarcReader
     private List<Message> curMessages;
     private int curMessageIndex;
     private AwsSqsSingleton aws_sqs = null;
+    private MarcReaderConfig config = null;
     
     private final static Logger logger = Logger.getLogger(MarcSQSReader.class);
     
-    public MarcSQSReader(String queueName)
+    public MarcSQSReader(MarcReaderConfig config, String queueName)
     {
-        init(queueName, null);
+        init(config, queueName, null);
     }
     
-    public MarcSQSReader(String queueName, String s3BucketName)
+    public MarcSQSReader(MarcReaderConfig config, String queueName, String s3BucketName)
     {
-        init(queueName, s3BucketName);
+        init(config, queueName, s3BucketName);
     }
     
-    public MarcSQSReader(String queueName, String s3BucketName, boolean createQueueIfNotExists, boolean destroyQueueAtEnd)
+    public MarcSQSReader(MarcReaderConfig config, String queueName, String s3BucketName, boolean createQueueIfNotExists, boolean destroyQueueAtEnd)
     {
         this.createQueueIfNotExists = createQueueIfNotExists;
         this.destroyQueueAtEnd = destroyQueueAtEnd;
-        init(queueName, s3BucketName);
+        init(config, queueName, s3BucketName);
     }
 
-    private void init(String queueName, String s3BucketName)
+    private void init(MarcReaderConfig config, String queueName, String s3BucketName)
     {
         this.queueName = queueName;
+        this.config = config;
         
         aws_sqs = AwsSqsSingleton.getInstance(s3BucketName);
         queueUrl = aws_sqs.getQueueUrlForName(this.queueName, createQueueIfNotExists);
@@ -138,13 +143,14 @@ public class MarcSQSReader implements MarcReader
             String messageType = message.getMessageAttributes().get("type").getStringValue();
             if (messageType.equals("marcinjson"))
             {
-                MarcReader jsreader = new MarcJsonReader(new StringReader(messageBody)); 
+                MarcReader jsreader = MarcReaderFactory.makeReader(config, new ByteArrayInputStream(messageBody.getBytes("UTF-8"))); //new MarcJsonReader(new StringReader(messageBody)); 
                 rec = jsreader.next();
             }
             else if (messageType.equals("base64/marc"))
             {
                 byte[] expandedMessageBodyBytes = Base64.decode(messageBody);
-                MarcReader binreader = new MarcPermissiveStreamReader(new ByteArrayInputStream(expandedMessageBodyBytes), true, true); 
+                MarcReader binreader = MarcReaderFactory.makeReader(config, new ByteArrayInputStream(expandedMessageBodyBytes));
+               //         new MarcPermissiveStreamReader(new ByteArrayInputStream(expandedMessageBodyBytes), true, true); 
                 rec = binreader.next();
             }
             else
@@ -164,7 +170,12 @@ public class MarcSQSReader implements MarcReader
         catch (NullPointerException npe)
         {
             logger.warn("Message missing attrribute \"type\"");
-            throw new MarcException("SQS queue named "+ queueName+ " not found");
+            throw new MarcException("Message missing attrribute \"type\"");
+        }
+        catch (IOException e)
+        {
+            logger.warn("I/O error decoding record -- this shouldn't happen");
+            throw new MarcException("I/O error decoding record -- this shouldn't happen");
         }
     }
         
@@ -174,8 +185,9 @@ public class MarcSQSReader implements MarcReader
         //    -s3 "virgo4-ingest-staging-messages" 
         String queueName= "virgo4-ingest-sirsi-marc-ingest-staging";
         String s3BucketName = "virgo4-ingest-staging-messages";
-
-        MarcSQSReader reader = new MarcSQSReader(queueName, s3BucketName);
+        MarcReaderConfig config = new MarcReaderConfig().setCombineConsecutiveRecordsFields("852|853|863|866|867|868|999").setToUtf8(true).setPermissiveReader(true);
+        
+        MarcSQSReader reader = new MarcSQSReader(config, queueName, s3BucketName);
         long start = System.currentTimeMillis();
         for (int i = 0; i < 1000; )
         {
