@@ -1,0 +1,73 @@
+package org.solrmarc.marc;
+
+import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
+
+import java.io.BufferedInputStream;
+import java.io.ByteArrayOutputStream;
+import java.io.FileInputStream;
+import java.io.FileNotFoundException;
+import java.io.IOException;
+import java.io.InputStream;
+
+import org.junit.Before;
+import org.junit.Test;
+import org.marc4j.MarcReaderConfig;
+import org.marc4j.marc.Record;
+import org.marc4j.util.RawRecord;
+import org.marc4j.util.RawRecordReader;
+
+import com.amazonaws.services.sqs.model.MessageAttributeValue;
+import com.amazonaws.services.sqs.model.SendMessageBatchRequest;
+import com.amazonaws.services.sqs.model.SendMessageRequest;
+import com.amazonaws.services.sqs.model.SendMessageResult;
+import com.amazonaws.util.Base64;
+
+
+public class TestReadFromQueue
+{
+    @Test
+    public void TestReadCombinedRec()
+    {
+        String queueName= "virgo4-ingest-sirsi-marc-ingest-development";
+        String s3BucketName = "virgo4-ingest-staging-messages";
+        
+        String filename="data/u4606651.mrc";
+        String queueUrl = AwsSqsSingleton.getInstance(s3BucketName).getQueueUrlForName(queueName, true);
+        
+        
+        try
+        {
+            RawRecordReader rawRecs = new RawRecordReader(new FileInputStream(filename));
+            RawRecord rec = rawRecs.hasNext() ? rawRecs.next() : null;
+            String id = rec.getRecordId();
+            byte[] buffer = rec.getRecordBytes();
+            assertTrue("record reader should be empty", rawRecs.hasNext() == false);
+            
+            String base64message = Base64.encodeAsString(buffer);
+            SendMessageRequest request = new SendMessageRequest(queueUrl, base64message)
+                    .addMessageAttributesEntry("id", new MessageAttributeValue().withDataType("String").withStringValue(id))
+                    .addMessageAttributesEntry("datasource", new MessageAttributeValue().withDataType("String").withStringValue("sirsi"))
+                    .addMessageAttributesEntry("type", new MessageAttributeValue().withDataType("String").withStringValue("base64/marc"));
+            SendMessageResult result = AwsSqsSingleton.getInstance(s3BucketName).getSQS().sendMessage(request);
+            
+        }
+        catch (FileNotFoundException e)
+        {
+            fail();
+        }
+        
+        MarcReaderConfig config = new MarcReaderConfig().setCombineConsecutiveRecordsFields("852|853|863|866|867|868|999").setToUtf8(true).setPermissiveReader(true);
+        
+        MarcSQSReader reader = new MarcSQSReader(config, queueName, s3BucketName);
+        
+        Record rec = reader.hasNext() ? reader.next() : null;
+        
+        AwsSqsSingleton.getInstance(s3BucketName).remove(rec.getControlNumber());
+
+        assertTrue("Incorrect Record Read", rec.getControlNumber().equals("u4606651"));
+        
+        
+    }
+    
+}
