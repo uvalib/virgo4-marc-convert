@@ -5,10 +5,12 @@ import static org.junit.Assert.fail;
 
 import java.io.BufferedInputStream;
 import java.io.ByteArrayOutputStream;
+import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InputStream;
+import java.util.LinkedHashSet;
 
 import org.junit.Before;
 import org.junit.Test;
@@ -18,6 +20,8 @@ import org.marc4j.util.RawRecord;
 import org.marc4j.util.RawRecordReader;
 
 import com.amazonaws.services.sqs.model.MessageAttributeValue;
+import com.amazonaws.services.sqs.model.PurgeQueueRequest;
+import com.amazonaws.services.sqs.model.PurgeQueueResult;
 import com.amazonaws.services.sqs.model.SendMessageBatchRequest;
 import com.amazonaws.services.sqs.model.SendMessageRequest;
 import com.amazonaws.services.sqs.model.SendMessageResult;
@@ -35,6 +39,8 @@ public class TestReadFromQueue
         String filename="data/u4606651.mrc";
         String queueUrl = AwsSqsSingleton.getInstance(s3BucketName).getQueueUrlForName(queueName, true);
         
+        // Make Sure The Queue is empty
+        PurgeQueueResult purgeResult = AwsSqsSingleton.getInstance(s3BucketName).getSQS().purgeQueue(new PurgeQueueRequest(queueUrl));
         
         try
         {
@@ -50,11 +56,10 @@ public class TestReadFromQueue
                     .addMessageAttributesEntry("datasource", new MessageAttributeValue().withDataType("String").withStringValue("sirsi"))
                     .addMessageAttributesEntry("type", new MessageAttributeValue().withDataType("String").withStringValue("base64/marc"));
             SendMessageResult result = AwsSqsSingleton.getInstance(s3BucketName).getSQS().sendMessage(request);
-            
         }
         catch (FileNotFoundException e)
         {
-            fail();
+            fail("Unable to find or open file "+ new File(filename).getAbsolutePath());
         }
         
         MarcReaderConfig config = new MarcReaderConfig().setCombineConsecutiveRecordsFields("852|853|863|866|867|868|999").setToUtf8(true).setPermissiveReader(true);
@@ -67,7 +72,11 @@ public class TestReadFromQueue
 
         assertTrue("Incorrect Record Read", rec.getControlNumber().equals("u4606651"));
         
+        // check to see whether the Item record fields are present
+        RecordTestingUtils.assertSubfieldHasExpectedValues(rec, "999", 'a', "PT9746 .F6 K6 2007 d.1", "PT9746 .F6 K6 2007 d.2", "PT9746 .F6 K6 2007 d.3");
         
+        // check to see whether the Summary Holdings fields were added
+        RecordTestingUtils.assertSubfieldHasExpectedValues(rec, "866", 'a', "d.1-3");
     }
     
 }
