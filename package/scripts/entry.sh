@@ -9,6 +9,7 @@ java -Dsolrmarc.track.solr.progress=false \
      -Dsolrmarc.indexer.threadcount=$VIRGO4_MARC_CONVERT_INDEXER_WORKERS \
      -Dsolrmarc.solrj.threadcount=$VIRGO4_MARC_CONVERT_SOLRJ_WORKERS \
      -Dsolrmarc.indexer.chunksize=10 \
+     -Dsolrmarc.terminate.on.marc.exception=false \
      -Dsolrmarc.track.progress=5000 \
      -classpath dist/marcsqs_reader.jar:$SOLRMARC_JAR org.solrmarc.driver.Boot SQSQueueDriver \
      -dir . \
