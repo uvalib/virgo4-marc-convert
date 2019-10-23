@@ -87,6 +87,12 @@ public class MarcSQSReader implements MarcReader
                 {
                     curMessageIndex = 0;
                 }
+                else if (Boolean.parseBoolean(System.getProperty("solrmarc.sqsdriver.terminate.on.empty", "false")))
+                {
+                    logger.info("Read queue " + this.queueName + " is empty.  Calling it a day.");
+                    curMessages = null;
+                    curMessageIndex = 0;
+                }
                 else // timed out without finding any records.   If there is a partial chunk waiting to be sent, flush it out.
                 {
                     logger.info("Read queue " + this.queueName + " is empty. Waiting for more records");
@@ -144,14 +150,30 @@ public class MarcSQSReader implements MarcReader
             if (messageType.equals("marcinjson"))
             {
                 MarcReader jsreader = MarcReaderFactory.makeReader(config, new ByteArrayInputStream(messageBody.getBytes("UTF-8"))); //new MarcJsonReader(new StringReader(messageBody)); 
-                rec = jsreader.next();
+                try {
+                    rec = jsreader.next();
+                }
+                catch (org.marc4j.MarcException me)
+                {
+                    String messageId = message.getMessageAttributes().get("id")!= null ? message.getMessageAttributes().get("id").getStringValue() : " <with no 'id' attribute>";
+                    logger.error("Error processing message for record "+ messageId);
+                    throw(me);
+                }
             }
             else if (messageType.equals("base64/marc"))
             {
                 byte[] expandedMessageBodyBytes = Base64.decode(messageBody);
                 MarcReader binreader = MarcReaderFactory.makeReader(config, new ByteArrayInputStream(expandedMessageBodyBytes));
                //         new MarcPermissiveStreamReader(new ByteArrayInputStream(expandedMessageBodyBytes), true, true); 
-                rec = binreader.next();
+                try { 
+                    rec = binreader.next();
+                }
+                catch (org.marc4j.MarcException me)
+                {
+                    String messageId = message.getMessageAttributes().get("id")!= null ? message.getMessageAttributes().get("id").getStringValue() : " <with no 'id' attribute>";
+                    logger.error("Error processing message for record "+ messageId);
+                    throw(me);
+                }
             }
             else
             {
