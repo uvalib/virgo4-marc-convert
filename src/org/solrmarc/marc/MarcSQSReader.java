@@ -2,22 +2,15 @@ package org.solrmarc.marc;
 
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
-import java.io.StringReader;
-import java.util.Arrays;
-import java.util.LinkedHashMap;
 import java.util.List;
-import java.util.Map;
 
 import org.apache.log4j.Logger;
 import org.marc4j.MarcException;
-import org.marc4j.MarcJsonReader;
-import org.marc4j.MarcPermissiveStreamReader;
 import org.marc4j.MarcReader;
 import org.marc4j.MarcReaderConfig;
 import org.marc4j.MarcReaderFactory;
 import org.marc4j.marc.Record;
 
-import com.amazonaws.services.sqs.model.DeleteMessageRequest;
 import com.amazonaws.services.sqs.model.Message;
 import com.amazonaws.services.sqs.model.ReceiveMessageRequest;
 import com.amazonaws.util.Base64;
@@ -30,7 +23,7 @@ public class MarcSQSReader implements MarcReader
    // private String s3BucketName; // = "virgo4-ingest-staging-messages";
     ReceiveMessageRequest receiveMessageRequest;
     private boolean createQueueIfNotExists = false;
-    private boolean destroyQueueAtEnd = false;
+   // private boolean destroyQueueAtEnd = false;
     private List<Message> curMessages;
     private int curMessageIndex;
     private AwsSqsSingleton aws_sqs = null;
@@ -48,10 +41,10 @@ public class MarcSQSReader implements MarcReader
         init(config, queueName, s3BucketName);
     }
     
-    public MarcSQSReader(MarcReaderConfig config, String queueName, String s3BucketName, boolean createQueueIfNotExists, boolean destroyQueueAtEnd)
+    public MarcSQSReader(MarcReaderConfig config, String queueName, String s3BucketName, boolean createQueueIfNotExists)
     {
         this.createQueueIfNotExists = createQueueIfNotExists;
-        this.destroyQueueAtEnd = destroyQueueAtEnd;
+   //     this.destroyQueueAtEnd = destroyQueueAtEnd;
         init(config, queueName, s3BucketName);
     }
 
@@ -222,6 +215,7 @@ public class MarcSQSReader implements MarcReader
         start = System.currentTimeMillis();
         for (int i = 0; i < 1000; i++)
         {
+            @SuppressWarnings("unused")
             Record record = reader.next();
         //    if (record != null)
        //     {

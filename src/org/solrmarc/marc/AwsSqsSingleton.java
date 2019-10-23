@@ -20,7 +20,6 @@ import com.amazonaws.services.sqs.model.CreateQueueResult;
 import com.amazonaws.services.sqs.model.DeleteMessageBatchRequest;
 import com.amazonaws.services.sqs.model.DeleteMessageBatchRequestEntry;
 import com.amazonaws.services.sqs.model.DeleteMessageBatchResult;
-import com.amazonaws.services.sqs.model.DeleteMessageBatchResultEntry;
 import com.amazonaws.services.sqs.model.DeleteMessageRequest;
 import com.amazonaws.services.sqs.model.GetQueueUrlResult;
 import com.amazonaws.services.sqs.model.QueueDoesNotExistException;
@@ -188,6 +187,7 @@ public class AwsSqsSingleton
                     queueUrl = entry.queueUrl;
                 }
             }
+            @SuppressWarnings("unused")
             DeleteMessageBatchResult res = getSQS().deleteMessageBatch(new DeleteMessageBatchRequest(queueUrl).withEntries(toDelete));
         }
     }

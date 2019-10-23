@@ -26,7 +26,7 @@ public class SolrSQSXMLOutProxy extends SolrProxy
  //   private String s3BucketName; // = "virgo4-ingest-staging-messages";
     private AwsSqsSingleton aws_sqs = null;
     private boolean createQueueIfNotExists = false;
-    private boolean destroyQueueAtEnd = false;
+//    private boolean destroyQueueAtEnd = false;
     private final static Logger logger = Logger.getLogger(SolrSQSXMLOutProxy.class);
 
     public SolrSQSXMLOutProxy(String queueName, String s3BucketName)

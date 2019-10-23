@@ -3,16 +3,10 @@ package org.solrmarc.marc;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
-import java.io.BufferedInputStream;
-import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
-import java.io.IOException;
-import java.io.InputStream;
-import java.util.LinkedHashSet;
 
-import org.junit.Before;
 import org.junit.Test;
 import org.marc4j.MarcReaderConfig;
 import org.marc4j.marc.Record;
@@ -22,7 +16,6 @@ import org.marc4j.util.RawRecordReader;
 import com.amazonaws.services.sqs.model.MessageAttributeValue;
 import com.amazonaws.services.sqs.model.PurgeQueueRequest;
 import com.amazonaws.services.sqs.model.PurgeQueueResult;
-import com.amazonaws.services.sqs.model.SendMessageBatchRequest;
 import com.amazonaws.services.sqs.model.SendMessageRequest;
 import com.amazonaws.services.sqs.model.SendMessageResult;
 import com.amazonaws.util.Base64;
