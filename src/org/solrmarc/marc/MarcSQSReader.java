@@ -93,10 +93,20 @@ public class MarcSQSReader implements MarcReader
                     logger.info("Read queue " + this.queueName + " is empty. Waiting for more records");
                 }
             }
+            // this is sent when the sqs object is shutdown.  It causes the reader thread to terminate cleanly.
+            // although at present it should actually be triggered.
             catch(com.amazonaws.AbortedException abort)
             {
                 curMessages = null;
                 curMessageIndex = 0;
+            }
+            catch(com.amazonaws.services.s3.model.AmazonS3Exception s3e)
+            {
+                logger.error("Read queue " + this.queueName + " Failed to get the S3 object associated with large SQS message. ");
+            }
+            catch(com.amazonaws.AmazonServiceException s3e)
+            {
+                logger.error("Read queue " + this.queueName + " Failed to get the S3 object associated with large SQS message. ");
             }
         }
         if (Thread.currentThread().isInterrupted())
