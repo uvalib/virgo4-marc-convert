@@ -138,6 +138,7 @@ public class SolrSQSXMLOutProxy extends SolrProxy
         {
             len += attribute.length() + 3;
         }
+        len += 500;  // fudge factor.    MMMmm  fudge.
         return(len);
     }
 

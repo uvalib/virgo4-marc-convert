@@ -1,6 +1,8 @@
 package org.solrmarc.marc;
 
 import java.io.ByteArrayInputStream;
+import java.io.File;
+import java.io.FileOutputStream;
 import java.io.IOException;
 import java.util.List;
 
@@ -91,10 +93,20 @@ public class MarcSQSReader implements MarcReader
                     logger.info("Read queue " + this.queueName + " is empty. Waiting for more records");
                 }
             }
+            // this is sent when the sqs object is shutdown.  It causes the reader thread to terminate cleanly.
+            // although at present it should actually be triggered.
             catch(com.amazonaws.AbortedException abort)
             {
                 curMessages = null;
                 curMessageIndex = 0;
+            }
+            catch(com.amazonaws.services.s3.model.AmazonS3Exception s3e)
+            {
+                logger.error("Read queue " + this.queueName + " Failed to get the S3 object associated with large SQS message. ");
+            }
+            catch(com.amazonaws.AmazonServiceException s3e)
+            {
+                logger.error("Read queue " + this.queueName + " Failed to get the S3 object associated with large SQS message. ");
             }
         }
         if (Thread.currentThread().isInterrupted())
@@ -164,6 +176,17 @@ public class MarcSQSReader implements MarcReader
                 catch (org.marc4j.MarcException me)
                 {
                     String messageId = message.getMessageAttributes().get("id")!= null ? message.getMessageAttributes().get("id").getStringValue() : " <with no 'id' attribute>";
+                    if (System.getProperty("solrmarc.sqsdriver.write.failed.messages")!= null)
+                    {
+                       File outputdir = new File(System.getProperty("solrmarc.sqsdriver.write.failed.messages"));
+                       if (outputdir != null && outputdir.isDirectory() && outputdir.canWrite() )
+                       {
+                           File outputfile = new File(outputdir, messageId+".mrc");
+                           FileOutputStream fout = new FileOutputStream(outputfile);
+                           fout.write(expandedMessageBodyBytes);
+                           fout.close();
+                       }
+                    }
                     logger.error("Error processing message for record "+ messageId);
                     throw(me);
                 }
