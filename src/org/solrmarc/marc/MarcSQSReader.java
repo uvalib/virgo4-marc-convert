@@ -26,6 +26,7 @@ public class MarcSQSReader implements MarcReader
     ReceiveMessageRequest receiveMessageRequest;
     private boolean createQueueIfNotExists = false;
    // private boolean destroyQueueAtEnd = false;
+    private boolean alreadyWaiting = false;
     private List<Message> curMessages;
     private int curMessageIndex;
     private AwsSqsSingleton aws_sqs = null;
@@ -81,16 +82,25 @@ public class MarcSQSReader implements MarcReader
                 if (curMessages.size() > 0)
                 {
                     curMessageIndex = 0;
+                    if (alreadyWaiting) 
+                    {
+                        logger.info("Read queue " + this.queueName + " active again. Getting to work.");
+                        alreadyWaiting = false;
+                    }
                 }
                 else if (Boolean.parseBoolean(System.getProperty("solrmarc.sqsdriver.terminate.on.empty", "false")))
                 {
-                    logger.info("Read queue " + this.queueName + " is empty.  Calling it a day.");
+                    logger.info("Read queue " + this.queueName + " is empty and solrmarc.sqsdriver.terminate.on.empty it true.  Calling it a day.");
                     curMessages = null;
                     curMessageIndex = 0;
                 }
                 else // timed out without finding any records.   If there is a partial chunk waiting to be sent, flush it out.
                 {
-                    logger.info("Read queue " + this.queueName + " is empty. Waiting for more records");
+                    if (!alreadyWaiting)
+                    {
+                        logger.info("Read queue " + this.queueName + " is empty. Waiting for more records");
+                        alreadyWaiting = true;
+                    }
                 }
             }
             // this is sent when the sqs object is shutdown.  It causes the reader thread to terminate cleanly.
