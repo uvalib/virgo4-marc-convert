@@ -39,6 +39,7 @@ public class SQSQueueDriver extends IndexDriver
 
     public final static String VIRGO4_MARC_CONVERT_IN_QUEUE =  "VIRGO4_MARC_CONVERT_IN_QUEUE";
     public final static String VIRGO4_MARC_CONVERT_OUT_QUEUE = "VIRGO4_MARC_CONVERT_OUT_QUEUE";
+    public final static String VIRGO4_MARC_CONVERT_DELETE_QUEUE = "VIRGO4_MARC_CONVERT_DELETE_QUEUE";
     public final static String VIRGO4_SQS_MESSAGE_BUCKET =     "VIRGO4_SQS_MESSAGE_BUCKET";
     public final static int VIRGO4_MARC_CONVERT_QUEUE_POLL_TIMEOUT = 20; // in seconds
     /**
@@ -93,6 +94,7 @@ public class SQSQueueDriver extends IndexDriver
     {
         parser.accepts("sqs-in", "sqs queue to read records from").withRequiredArg().ofType( String.class );
         parser.accepts("sqs-out", "sqs queue to write solr docs to").withRequiredArg().ofType( String.class );
+        parser.accepts("sqs-delete", "sqs queue to write ids to delete to").withRequiredArg().ofType( String.class );
         parser.accepts("s3", "s3 bucket to use for oversize records").withRequiredArg().ofType( String.class );
         if (System.getProperty("solrmarc.indexer.test.fire.method","undefined").equals("undefined"))
         {
@@ -226,10 +228,10 @@ public class SQSQueueDriver extends IndexDriver
         String s3Bucket = getSqsParm(options, "s3", VIRGO4_SQS_MESSAGE_BUCKET);
         boolean oversizeOnly = Boolean.parseBoolean(System.getProperty("solrmarc-sqs-oversize-only", "false"));
         
-        logger.info("Opening output queue: "+ sqsOutQueue + ((s3Bucket != null) ? " (with S3 bucket: "+ s3Bucket + " )" : ""));
 
         if (sqsOutQueue != null)
         {
+            logger.info("Opening output queue: "+ sqsOutQueue + ((s3Bucket != null) ? " (with S3 bucket: "+ s3Bucket + " )" : ""));
             solrProxy = new SolrSQSXMLOutProxy(sqsOutQueue, s3Bucket, oversizeOnly);
         }
         else if (solrURL.equals("stdout"))
