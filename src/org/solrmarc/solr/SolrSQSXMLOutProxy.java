@@ -52,7 +52,8 @@ public class SolrSQSXMLOutProxy extends SolrProxy
 
     public int addDoc(SolrInputDocument inputDoc)
     {
-        String id = inputDoc.getFieldValue("id").toString();
+        String id = inputDoc.getFieldValue("raw_id") != null ? inputDoc.getFieldValue("raw_id").toString() : 
+                    inputDoc.getFieldValue("id") != null ? inputDoc.getFieldValue("id").toString() : "<no id>";
         String xml = ClientUtils.toXML(inputDoc);
         SendMessageRequest message = new SendMessageRequest(queueUrl, xml)
                 .addMessageAttributesEntry("id", new MessageAttributeValue().withDataType("String").withStringValue(id))
@@ -84,7 +85,8 @@ public class SolrSQSXMLOutProxy extends SolrProxy
             {
                 SolrInputDocument inputDoc = pbIter.next();
                 String xml = ClientUtils.toXML(inputDoc);
-                String id = inputDoc.getFieldValue("id").toString();
+                String id = inputDoc.getFieldValue("raw_id") != null ? inputDoc.getFieldValue("raw_id").toString() : 
+                            inputDoc.getFieldValue("id") != null ? inputDoc.getFieldValue("id").toString() : "<no id>";
                 // The attributes here must be the same (is size at least) as those added below note id is include twice since it is used as an attribute and as the batch id
                 int curMessageSize = getTotalMessageSize(xml, id, "id", id, "datasource", "solrmarc", "type", "application/xml");
                 if (i > 0 && messageBatchSize + curMessageSize >= AwsSqsSingleton.SQS_SIZE_LIMIT)
