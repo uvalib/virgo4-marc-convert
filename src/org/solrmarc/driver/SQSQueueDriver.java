@@ -145,7 +145,11 @@ public class SQSQueueDriver extends IndexDriver
             System.exit(6);
         }
         String specs = options.valueOf(configSpecs);
-        if (indexSpecMap != null && !indexSpecMap.contains("default"))
+        if (indexSpecMap != null && indexSpecMap.containsKey("default") && specs == null)
+        {
+            specs = indexSpecMap.getProperty("default");
+        }
+        else if (indexSpecMap != null && !indexSpecMap.containsKey("default"))
         {
             indexSpecMap.put("default", specs);
         }
