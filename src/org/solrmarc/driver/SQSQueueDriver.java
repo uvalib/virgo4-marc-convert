@@ -1,5 +1,6 @@
 package org.solrmarc.driver;
 
+import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.PrintStream;
@@ -16,7 +17,9 @@ import org.solrmarc.marc.MarcSQSReader;
 import org.solrmarc.marc.SolrMarcMarcReaderFactory;
 import org.solrmarc.solr.DevNullProxy;
 import org.solrmarc.solr.SolrCoreLoader;
+import org.solrmarc.solr.SolrProxy;
 import org.solrmarc.solr.SolrRuntimeException;
+import org.solrmarc.solr.SolrSQSWrappedProxy;
 import org.solrmarc.solr.SolrSQSXMLOutProxy;
 import org.solrmarc.solr.StdOutProxy;
 import org.solrmarc.solr.XMLOutProxy;
@@ -42,6 +45,10 @@ public class SQSQueueDriver extends IndexDriver
     public final static String VIRGO4_MARC_CONVERT_DELETE_QUEUE = "VIRGO4_MARC_CONVERT_DELETE_QUEUE";
     public final static String VIRGO4_SQS_MESSAGE_BUCKET =     "VIRGO4_SQS_MESSAGE_BUCKET";
     public final static int VIRGO4_MARC_CONVERT_QUEUE_POLL_TIMEOUT = 20; // in seconds
+    private boolean reconfigurable = false;
+    private Properties indexSpecMap = null; 
+    private String indexSpecName = null;
+    
     /**
      * The main entry point of the SolrMarc indexing process. Typically called by the Boot class.
      *
@@ -96,6 +103,7 @@ public class SQSQueueDriver extends IndexDriver
         parser.accepts("sqs-out", "sqs queue to write solr docs to").withRequiredArg().ofType( String.class );
         parser.accepts("sqs-delete", "sqs queue to write ids to delete to").withRequiredArg().ofType( String.class );
         parser.accepts("s3", "s3 bucket to use for oversize records").withRequiredArg().ofType( String.class );
+        parser.accepts("reconfig", "specifies that the indexer can be reconfigured at runtime, providing a mapping from data source name to index specification").withRequiredArg().ofType( String.class );
         if (System.getProperty("solrmarc.indexer.test.fire.method","undefined").equals("undefined"))
         {
             System.setProperty("solrmarc.indexer.test.fire.method", "true");
@@ -119,7 +127,13 @@ public class SQSQueueDriver extends IndexDriver
         }
 
         String sqsOutQueue = getSqsParm(options, "sqs-out", VIRGO4_MARC_CONVERT_OUT_QUEUE);
-        boolean multithread =  sqsOutQueue != null && !options.has("debug") ? true : false;
+        reconfigurable = options.has("reconfig");
+        if (reconfigurable) 
+        {
+            String reconfigFile = options.valueOf("reconfig").toString();
+            indexSpecMap = PropertyUtils.loadProperties(ValueIndexerFactory.instance().getHomeDirs(), reconfigFile, false, null, null);
+        }
+        boolean multithread =  sqsOutQueue != null && !options.has("debug") && !reconfigurable ? true : false;
         try
         {
             this.configureOutput(options);
@@ -131,6 +145,12 @@ public class SQSQueueDriver extends IndexDriver
             System.exit(6);
         }
         String specs = options.valueOf(configSpecs);
+        if (indexSpecMap != null && !indexSpecMap.contains("default"))
+        {
+            indexSpecMap.put("default", specs);
+        }
+
+        this.indexSpecName = "default";
         try
         {
             logger.info("Reading and compiling index specifications: " + specs);
@@ -152,6 +172,57 @@ public class SQSQueueDriver extends IndexDriver
         }
     }
 
+    public void reconfigureIndexer(String specSelector)
+    {
+        if (specSelector.equals(indexSpecName)) 
+        {
+            return;
+        }
+        String indexSpecString; 
+        if (indexSpecMap.containsKey(specSelector))
+        {
+            indexSpecString = indexSpecMap.getProperty(specSelector);
+        }
+        else
+        {
+            indexSpecString = indexSpecMap.getProperty("default");
+        }
+        try {
+            String[] indexSpecs = indexSpecString.split("[ ]*[;,][ ]*");
+            File[] specFiles = new File[indexSpecs.length];
+            int i = 0;
+            for (String indexSpec : indexSpecs)
+            {
+                File specFile = new File(indexSpec);
+                if (!specFile.isAbsolute())
+                {
+                    specFile = PropertyUtils.findFirstExistingFile(homeDirStrs, indexSpec);
+                }
+                logger.info("Opening index spec file: " + specFile);
+                specFiles[i++] = specFile;
+            }
+            indexers = indexerFactory.createValueIndexers(specFiles);
+            indexer.indexers.clear();
+            indexer.indexers.addAll(indexers);
+            indexSpecName = specSelector;
+        }
+        catch (IllegalAccessException e)
+        {
+            // TODO Auto-generated catch block
+            e.printStackTrace();
+        }
+        catch (InstantiationException e)
+        {
+            // TODO Auto-generated catch block
+            e.printStackTrace();
+        }
+        catch (IOException e)
+        {
+            // TODO Auto-generated catch block
+            e.printStackTrace();
+        }
+    }
+    
     private String getSqsParm(OptionSet options, String clOptName, String propertyOrEnvName)
     {
         return (options.has(clOptName) ? options.valueOf(clOptName).toString() : 
@@ -206,7 +277,14 @@ public class SQSQueueDriver extends IndexDriver
     {
         try
         {
-            reader = new MarcSQSReader(readerConfig, inputQueueName, s3BucketName);
+            if (this.reconfigurable) 
+            {
+                reader = new MarcSQSReader(readerConfig, inputQueueName, s3BucketName, false, this);
+            }
+            else 
+            {
+                reader = new MarcSQSReader(readerConfig, inputQueueName, s3BucketName);
+            }
         }
 //        catch (IOException e)
 //        {
@@ -227,20 +305,27 @@ public class SQSQueueDriver extends IndexDriver
         String sqsOutQueue = getSqsParm(options, "sqs-out", VIRGO4_MARC_CONVERT_OUT_QUEUE);
         String s3Bucket = getSqsParm(options, "s3", VIRGO4_SQS_MESSAGE_BUCKET);
         boolean oversizeOnly = Boolean.parseBoolean(System.getProperty("solrmarc-sqs-oversize-only", "false"));
-        
+        boolean wrapped = false;
 
         if (sqsOutQueue != null)
         {
             logger.info("Opening output queue: "+ sqsOutQueue + ((s3Bucket != null) ? " (with S3 bucket: "+ s3Bucket + " )" : ""));
             solrProxy = new SolrSQSXMLOutProxy(sqsOutQueue, s3Bucket, oversizeOnly);
+            return;
         }
-        else if (solrURL.equals("stdout"))
+        else if (solrURL.startsWith("wrapped"))
+        {
+            solrURL = solrURL.replace("wrapped", "");
+            wrapped = true;
+        }
+        if (solrURL.equals("stdout"))
         {
             try
             {
                 PrintStream out = new PrintStream(System.out, true, "UTF-8");
                 System.setOut(out);
                 solrProxy = new StdOutProxy(out);
+                if (wrapped) solrProxy = new SolrSQSWrappedProxy(solrProxy);
             }
             catch (UnsupportedEncodingException e)
             {
@@ -254,6 +339,7 @@ public class SQSQueueDriver extends IndexDriver
                 PrintStream out = new PrintStream(System.out, true, "UTF-8");
                 System.setOut(out);
                 solrProxy = new XMLOutProxy(out);
+                if (wrapped) solrProxy = new SolrSQSWrappedProxy(solrProxy);
             }
             catch (UnsupportedEncodingException e)
             {
@@ -263,6 +349,7 @@ public class SQSQueueDriver extends IndexDriver
         else if (solrURL.equals("devnull"))
         {
             solrProxy = new DevNullProxy();
+            if (wrapped) solrProxy = new SolrSQSWrappedProxy(solrProxy);
         }
         else
         {

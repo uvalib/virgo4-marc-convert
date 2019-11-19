@@ -12,6 +12,7 @@ import org.marc4j.MarcReader;
 import org.marc4j.MarcReaderConfig;
 import org.marc4j.MarcReaderFactory;
 import org.marc4j.marc.Record;
+import org.solrmarc.driver.SQSQueueDriver;
 
 import com.amazonaws.services.sqs.model.Message;
 import com.amazonaws.services.sqs.model.ReceiveMessageRequest;
@@ -31,6 +32,7 @@ public class MarcSQSReader implements MarcReader
     private int curMessageIndex;
     private AwsSqsSingleton aws_sqs = null;
     private MarcReaderConfig config = null;
+    private SQSQueueDriver driver = null;
     
     private final static Logger logger = Logger.getLogger(MarcSQSReader.class);
     
@@ -47,6 +49,14 @@ public class MarcSQSReader implements MarcReader
     public MarcSQSReader(MarcReaderConfig config, String queueName, String s3BucketName, boolean createQueueIfNotExists)
     {
         this.createQueueIfNotExists = createQueueIfNotExists;
+   //     this.destroyQueueAtEnd = destroyQueueAtEnd;
+        init(config, queueName, s3BucketName);
+    }
+
+    public MarcSQSReader(MarcReaderConfig config, String queueName, String s3BucketName, boolean createQueueIfNotExists, SQSQueueDriver driver)
+    {
+        this.createQueueIfNotExists = createQueueIfNotExists;
+        this.driver = driver;
    //     this.destroyQueueAtEnd = destroyQueueAtEnd;
         init(config, queueName, s3BucketName);
     }
@@ -209,6 +219,12 @@ public class MarcSQSReader implements MarcReader
             logger.trace(rec.toString());
             
             String id = message.getMessageAttributes().get("id").getStringValue();
+            String indexSpecName = message.getMessageAttributes().get("datasource") != null ? message.getMessageAttributes().get("datasource").getStringValue() : null;
+            
+            if (indexSpecName != null && driver != null)  
+            {
+                driver.reconfigureIndexer(indexSpecName);
+            }
             final String messageReceiptHandle = message.getReceiptHandle();
             //  Add message Receipt Handle to a map for later deletion
             aws_sqs.add(queueUrl, id, messageReceiptHandle);
