@@ -13,7 +13,7 @@ java -Dsolrmarc.track.solr.progress=false \
      -Dsolrmarc.track.progress=5000 \
      -classpath dist/marcsqs_reader.jar:$SOLRMARC_JAR org.solrmarc.driver.Boot SQSQueueDriver \
      -dir . \
-     -config $VIRGO4_MARC_CONVERT_CONFIG
+     $VIRGO4_MARC_CONVERT_CONFIG
 
 #
 # end of file
