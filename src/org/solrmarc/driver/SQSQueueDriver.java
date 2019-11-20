@@ -183,6 +183,7 @@ public class SQSQueueDriver extends IndexDriver
             return;
         }
         String indexSpecString; 
+        logger.info("Received records from different datasource, re-initializing specs for "+ indexSpecName);
         if (indexSpecMap.containsKey(specSelector))
         {
             indexSpecString = indexSpecMap.getProperty(specSelector);
@@ -191,6 +192,8 @@ public class SQSQueueDriver extends IndexDriver
         {
             indexSpecString = indexSpecMap.getProperty("default");
         }
+        logger.info("Using specifications: "+ indexSpecString);
+
         try {
             String[] indexSpecs = indexSpecString.split("[ ]*[;,][ ]*");
             File[] specFiles = new File[indexSpecs.length];
