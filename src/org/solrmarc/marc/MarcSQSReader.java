@@ -219,7 +219,7 @@ public class MarcSQSReader implements MarcReader
             logger.trace(rec.toString());
             
             String id = message.getMessageAttributes().get("id").getStringValue();
-            String indexSpecName = message.getMessageAttributes().get("datasource") != null ? message.getMessageAttributes().get("datasource").getStringValue() : null;
+            String indexSpecName = message.getMessageAttributes().get("source") != null ? message.getMessageAttributes().get("source").getStringValue() : null;
             
             if (indexSpecName != null && driver != null)  
             {

@@ -101,7 +101,7 @@ public class TestReadFromQueue
                 String base64message = Base64.encodeAsString(buffer);
                 SendMessageRequest request = new SendMessageRequest(queueUrl, base64message)
                         .addMessageAttributesEntry("id", new MessageAttributeValue().withDataType("String").withStringValue(id))
-                        .addMessageAttributesEntry("datasource", new MessageAttributeValue().withDataType("String").withStringValue(indexSpecName))
+                        .addMessageAttributesEntry("source", new MessageAttributeValue().withDataType("String").withStringValue(indexSpecName))
                         .addMessageAttributesEntry("type", new MessageAttributeValue().withDataType("String").withStringValue("base64/marc"));
                 SendMessageResult result = AwsSqsSingleton.getInstance(s3BucketName).getSQS().sendMessage(request);
             }
