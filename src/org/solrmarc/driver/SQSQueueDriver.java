@@ -183,7 +183,7 @@ public class SQSQueueDriver extends IndexDriver
             return;
         }
         String indexSpecString; 
-        logger.info("Received records from different datasource, re-initializing specs for "+ indexSpecName);
+        logger.info("Received records from different datasource, re-initializing specs for "+ specSelector);
         if (indexSpecMap.containsKey(specSelector))
         {
             indexSpecString = indexSpecMap.getProperty(specSelector);
