@@ -33,6 +33,7 @@ public class MarcSQSReader implements MarcReader
     private AwsSqsSingleton aws_sqs = null;
     private MarcReaderConfig config = null;
     private SQSQueueDriver driver = null;
+    private int messagesSinceLastSleep = 0;
     
     private final static Logger logger = Logger.getLogger(MarcSQSReader.class);
     
@@ -92,6 +93,7 @@ public class MarcSQSReader implements MarcReader
                 if (curMessages.size() > 0)
                 {
                     curMessageIndex = 0;
+                    messagesSinceLastSleep += curMessages.size();
                     if (alreadyWaiting) 
                     {
                         logger.info("Read queue " + this.queueName + " active again. Getting to work.");
@@ -109,7 +111,9 @@ public class MarcSQSReader implements MarcReader
                     if (!alreadyWaiting)
                     {
                         logger.info("Read queue " + this.queueName + " is empty. Waiting for more records");
+                        logger.info(messagesSinceLastSleep + " messages received since waking up.");
                         alreadyWaiting = true;
+                        messagesSinceLastSleep = 0;
                     }
                 }
             }
