@@ -19,6 +19,7 @@ public class ComparisonMixin implements Mixin
     static Pattern monthCheck = Pattern.compile("(0[1-9]|1[0-2])");
     static Pattern longMonthCheck = Pattern.compile("(0[13578]|1[02])");
     static Pattern dayCheck = Pattern.compile("(0[1-9]|[12][0-9]|30)");
+    static Pattern dayCheckFeb = Pattern.compile("(0[1-9]|1[0-9]|2[0-8])");
 
     public Collection<String> mapDateComparison(Collection<String> keys, String dateStrToCompare, String ifBefore, String ifEqual, String ifAfter)
     {
@@ -79,7 +80,9 @@ public class ComparisonMixin implements Mixin
                 {
                     if (monthCheck.matcher(month).matches())
                     {
-                        if (dayCheck.matcher(day).matches() || (day.equals("31") && longMonthCheck.matcher(month).matches()))
+                        if (!month.equals("02") && dayCheck.matcher(day).matches() || 
+                                ( longMonthCheck.matcher(month).matches() && day.equals("31")) || 
+                                ( month.matches("02") && dayCheckFeb.matcher(day).matches()))
                         {
                             value = key;
                         }
