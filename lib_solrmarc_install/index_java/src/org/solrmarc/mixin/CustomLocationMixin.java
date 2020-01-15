@@ -1115,12 +1115,11 @@ public class CustomLocationMixin extends SolrIndexerMixin
         return (resultSet);
     }
 
-
-    public Set<String> getCustomAvailabilityForLocation(final Record record, String locationMap, String visibilityMap, String libraryMap) throws Exception
+    public Set<String> getCustomAvailabilityForLocation(final Record record, String locationAvailabilityMap, String visibilityMap, String libraryMap) throws Exception
     {
         Set<String> resultSet = new LinkedHashSet<String>();
         List<?> fields999 = trimmedHoldingsList;
-        AbstractMultiValueMapping locMap = ValueIndexerFactory.instance().createMultiValueMapping(locationMap);
+        AbstractMultiValueMapping locMap = ValueIndexerFactory.instance().createMultiValueMapping(locationAvailabilityMap);
         AbstractMultiValueMapping visMap = ValueIndexerFactory.instance().createMultiValueMapping(visibilityMap);
         AbstractMultiValueMapping libMap = ValueIndexerFactory.instance().createMultiValueMapping(libraryMap);
         for (DataField field : (List<DataField>) fields999)
@@ -1185,40 +1184,49 @@ public class CustomLocationMixin extends SolrIndexerMixin
     }
     
     public static void addCustomAvailabilityForLocation(Set<String> resultSet, String curLoc, String homeLoc, String lib, 
-            AbstractMultiValueMapping locMap, AbstractMultiValueMapping visMap, AbstractMultiValueMapping libMap) throws Exception
+            AbstractMultiValueMapping availMap, AbstractMultiValueMapping visMap, AbstractMultiValueMapping libMap) throws Exception
     {    
         String mappedHomeVis = visMap.mapSingle(homeLoc);
-        String mappedHomeLoc = locMap.mapSingle(homeLoc);
+        String mappedHomeAvail = availMap.mapSingle(homeLoc);
+        if (homeLoc.equals("INTERNET") || curLoc.equals("INTERNET"))
+        {
+            resultSet.add("Online");
+            return;
+        }
         if (mappedHomeVis.equals("VISIBLE") )
         {
-            String combinedLocMapped = locMap.mapSingle(homeLoc + "__" + lib);
-            if (combinedLocMapped != null) mappedHomeLoc = combinedLocMapped;
+            String combinedLocMapped = availMap.mapSingle(homeLoc + "__" + lib);
+            if (combinedLocMapped != null) mappedHomeAvail = combinedLocMapped;
+            combinedLocMapped = availMap.mapSingle("Library" + "__" + lib);
+            if (combinedLocMapped != null) mappedHomeAvail = combinedLocMapped;
         }
         String mappedLib = libMap.mapSingle(lib);
         if (curLoc != null)
         {
-            String mappedCurLoc = locMap.mapSingle(curLoc);
+            String mappedCurAvail = availMap.mapSingle(curLoc);
             String mappedCurVis = visMap.mapSingle(curLoc);
             if (mappedCurVis.equals("VISIBLE") )
             {
-                String combinedLocMapped = locMap.mapSingle(homeLoc + "__" + lib);
-                if (combinedLocMapped != null) mappedCurLoc = combinedLocMapped;
+                String combinedLocMapped = availMap.mapSingle(curLoc + "__" + lib);
+                if (combinedLocMapped != null) mappedCurAvail = combinedLocMapped;
+                combinedLocMapped = availMap.mapSingle("Library" + "__" + lib);
+                if (combinedLocMapped != null) mappedCurAvail = combinedLocMapped;
             }
             if (mappedCurVis.equals("HIDDEN")) return; // this copy of the item is Hidden, go no further
-            if (mappedCurLoc != null)
+            if (mappedCurAvail != null)
             {
-                if (mappedCurLoc.contains("$m") && mappedLib != null)
+                if (mappedCurAvail.contains("$m") && mappedLib != null)
                 {
-                    resultSet.add(mappedCurLoc.replaceAll("[$]m", mappedLib));
-                    resultSet.add(mappedCurLoc.replaceAll("[$]m", "").trim());
+                    resultSet.add(mappedCurAvail.replaceAll("[$]m", mappedLib));
+                    resultSet.add(mappedCurAvail.replaceAll("[$]m", "").trim());
                 }
-                else if (mappedCurLoc.contains("$m") && mappedLib == null)
+                else if (mappedCurAvail.contains("$m") && mappedLib == null)
                 {
-                    resultSet.add(mappedCurLoc.replaceAll("[$]m", "").trim());
+                    resultSet.add(mappedCurAvail.replaceAll("[$]m", "").trim());
                 }
                 else 
                 {
-                    resultSet.add(mappedCurLoc);
+                    resultSet.add(mappedCurAvail);
                 }
                 return; // Used
             }
@@ -1228,20 +1236,20 @@ public class CustomLocationMixin extends SolrIndexerMixin
             }
         }
         if (mappedHomeVis.equals("HIDDEN")) return; // this copy of the item is Hidden, go no further
-        if (mappedHomeLoc != null)
+        if (mappedHomeAvail != null)
         {
-            if (mappedHomeLoc.contains("$m") && mappedLib != null) 
+            if (mappedHomeAvail.contains("$m") && mappedLib != null) 
             {
-                resultSet.add(mappedHomeLoc.replaceAll("[$]m", mappedLib));
-                resultSet.add(mappedHomeLoc.replaceAll("[$]m", "").trim());
+                resultSet.add(mappedHomeAvail.replaceAll("[$]m", mappedLib));
+                resultSet.add(mappedHomeAvail.replaceAll("[$]m", "").trim());
             }
-            else if (mappedHomeLoc.contains("$m") && mappedLib == null)
+            else if (mappedHomeAvail.contains("$m") && mappedLib == null)
             {
-                resultSet.add(mappedHomeLoc.replaceAll("[$]m", "").trim());
+                resultSet.add(mappedHomeAvail.replaceAll("[$]m", "").trim());
             }
             else
             {
-                resultSet.add(mappedHomeLoc);
+                resultSet.add(mappedHomeAvail);
             }
         }
     }
