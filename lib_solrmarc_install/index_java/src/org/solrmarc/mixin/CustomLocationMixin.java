@@ -1041,13 +1041,15 @@ public class CustomLocationMixin extends SolrIndexerMixin
             Subfield curLocF = field.getSubfield('k');
             Subfield homeLocF = field.getSubfield('l');
             Subfield libF = field.getSubfield('m');
+            Subfield shadowF = field.getSubfield('3');
             String lib = (libF != null ? libF.getData() : null);
             String mappedLib = libMap.mapSingle(lib);
             if (mappedLib == null || resultSet.contains(mappedLib)) continue;
             String curLoc = (curLocF != null ? curLocF.getData() : null);
             String homeLoc = (homeLocF != null ? homeLocF.getData() : null);
             String mappedHomeVis = visMap.mapSingle(homeLoc);
-            if (mappedHomeVis.equals("HIDDEN"))
+            boolean shadow = (shadowF != null ? shadowF.getData().length() > 0 : false);
+            if (shadow && mappedHomeVis.equals("HIDDEN"))
             {
                 continue;
             }
@@ -1073,12 +1075,14 @@ public class CustomLocationMixin extends SolrIndexerMixin
             Subfield curLocF = field.getSubfield('k');
             Subfield homeLocF = field.getSubfield('l');
             Subfield libF = field.getSubfield('m');
+            Subfield shadowF = field.getSubfield('3');
             String curLoc = (curLocF != null ? curLocF.getData() : null);
             String homeLoc = (homeLocF != null ? homeLocF.getData() : null);
             String lib = (libF != null ? libF.getData() : null);
+            boolean shadow = (shadowF != null ? shadowF.getData().length() > 0 : false);
             String mappedHomeVis = visMap.mapSingle(homeLoc);
             String mappedHomeLoc = locMap.mapSingle(homeLoc);
-            if (mappedHomeVis.equals("VISIBLE") && mappedHomeLoc == null)
+            if ((!shadow && mappedHomeVis.equals("VISIBLE")) && mappedHomeLoc == null)
             {
                 String combinedLocMapped = locMap.mapSingle(homeLoc + "__" + lib);
                 if (combinedLocMapped != null) mappedHomeLoc = combinedLocMapped;
@@ -1088,7 +1092,7 @@ public class CustomLocationMixin extends SolrIndexerMixin
             {
                 String mappedCurLoc = locMap.mapSingle(curLoc);
                 String mappedCurVis = visMap.mapSingle(curLoc);
-                if (mappedCurVis.equals("HIDDEN")) continue; // this copy of the item is Hidden, go no further
+                if (shadow || mappedCurVis.equals("HIDDEN")) continue; // this copy of the item is Hidden, go no further
                 if (mappedCurLoc != null)
                 {
                     if (mappedCurLoc.contains("$m") && mappedLib != null)
@@ -1103,7 +1107,7 @@ public class CustomLocationMixin extends SolrIndexerMixin
                     continue; // Used
                 }
             }
-            if (mappedHomeVis.equals("HIDDEN")) continue; // this copy of the item is Hidden, go no further
+            if (shadow || mappedHomeVis.equals("HIDDEN")) continue; // this copy of the item is Hidden, go no further
             if (mappedHomeLoc != null && mappedHomeLoc.contains("$"))
             {
                 if (mappedLib != null) mappedHomeLoc = mappedHomeLoc.replaceAll("[$]m", mappedLib);
@@ -1127,10 +1131,15 @@ public class CustomLocationMixin extends SolrIndexerMixin
             Subfield curLocF = field.getSubfield('k');
             Subfield homeLocF = field.getSubfield('l');
             Subfield libF = field.getSubfield('m');
+            Subfield shadowF = field.getSubfield('3');
             String curLoc = (curLocF != null ? curLocF.getData() : null);
             String homeLoc = (homeLocF != null ? homeLocF.getData() : null);
             String lib = (libF != null ? libF.getData() : null);
-            addCustomAvailabilityForLocation(resultSet, curLoc, homeLoc, lib, locMap, visMap, libMap);
+            boolean shadow = (shadowF != null ? shadowF.getData().length() > 0 : false);
+            if (!shadow)
+            {
+                addCustomAvailabilityForLocation(resultSet, curLoc, homeLoc, lib, locMap, visMap, libMap);
+            }
         }
         return (resultSet);
     }
@@ -1261,71 +1270,50 @@ public class CustomLocationMixin extends SolrIndexerMixin
         boolean returnHiddenRecs = returnHidden.startsWith("return");
         AbstractMultiValueMapping map = ValueIndexerFactory.instance().createMultiValueMapping(propertiesMap);
         // String mapName = loadTranslationMap(null, propertiesMap);
-
-        Set<String> fields = SolrIndexer.instance().getFieldList(record, "999aikl,join(\"%%%\")");
         boolean visible = false;
-        String extraString = null;
-        if (processExtraShadowedIds && locationExtraData.boundWithIds != null && locationExtraData.boundWithIds.containsKey(record.getControlNumber().substring(1)))
+        List<VariableField> vfields = record.getVariableFields("999");
+        for (VariableField vfield : (List<VariableField>) vfields)
         {
-            String boundWithHolding = locationExtraData.boundWithIds.get(record.getControlNumber().substring(1));
-            String fparts[] = boundWithHolding.split("\\|");
-            String mappedFpartCurrent = map.mapSingle(fparts[2]);
-            String mappedFpartHome = map.mapSingle(fparts[3]);
-            if (mappedFpartCurrent.equals("VISIBLE") && mappedFpartHome.equals("VISIBLE"))
+            DataField field = (DataField)vfield;
+            Subfield callnumF = field.getSubfield('a');
+            Subfield curLocF = field.getSubfield('k');
+            Subfield homeLocF = field.getSubfield('l');
+            Subfield libF = field.getSubfield('m');
+            Subfield shadowF = field.getSubfield('3');
+            String callnum = (callnumF != null ? callnumF.getData() : null);
+            String curLoc = (curLocF != null ? curLocF.getData() : null);
+            String homeLoc = (homeLocF != null ? homeLocF.getData() : null);
+            String lib = (libF != null ? libF.getData() : null);
+            boolean shadow = (shadowF != null ? shadowF.getData().length() > 0 : false);
+            // this test (and the change above to return aikl instead of ikl) added in response to JIRA ISSUE LIBSRVSRCHDISCOV-377
+            if (callnum.matches(".*[Oo][Rr][Dd][Ee][Rr][- ]*0.*"))
             {
-                visible = true;
+                continue;
             }
-        }
-        else
-        {
-            if (processExtraShadowedIds && locationExtraData.addnlShadowedIds.containsKey(record.getControlNumber()))
+            else if (shadow == true || ( curLoc == null && homeLoc == null))
             {
-                extraString = locationExtraData.addnlShadowedIds.get(record.getControlNumber());
+                continue;
             }
-            if ("".equals(extraString)) visible = false;
-            else
+            else if (curLoc == null)
             {
-                for (String field : fields)
+                String mappedHomeLoc = map.mapSingle(homeLoc);
+                if (mappedHomeLoc.equals("VISIBLE")) visible = true;
+            }
+            else if (curLoc != null || curLoc.equals("RSRVSHADOW"))
+            {
+                String mappedHomeLoc = map.mapSingle(homeLoc);
+                if (mappedHomeLoc.equals("VISIBLE"))
                 {
-                    String fparts[] = field.split("%%%");
-                    // this test (and the change above to return aikl instead of ikl) added in response to JIRA ISSUE LIBSRVSRCHDISCOV-377
-                    if (fparts[0].matches(".*[Oo][Rr][Dd][Ee][Rr][- ]*0.*"))
-                    {
-                        continue;
-                    }
-                    else if (extraString != null && extraString.contains("|" + fparts[1] + "|"))
-                    {
-                        // this holding is marked as Hidden via the addnlShadowedIds data file
-                        // so simply continue, and unless another non-Hidden holding is found the
-                        // record will be not visible.
-                        continue;
-                    }
-                    else if (fparts.length < 3)
-                    {
-                        continue;
-                    }
-                    else if (fparts.length == 3)
-                    {
-                        String mappedFpart = map.mapSingle(fparts[2]);
-                        if (mappedFpart.equals("VISIBLE")) visible = true;
-                    }
-                    else if (fparts.length == 4 || fparts[3].equals("RSRVSHADOW"))
-                    {
-                        String mappedFpart1 = map.mapSingle(fparts[2]);
-                        if (mappedFpart1.equals("VISIBLE"))
-                        {
-                            visible = true;
-                        }
-                    }
-                    else if (fparts.length == 4)
-                    {
-                        String mappedFpart1 = map.mapSingle(fparts[2]);
-                        String mappedFpart2 = map.mapSingle(fparts[3]);
-                        if (mappedFpart1.equals("VISIBLE") && mappedFpart2.equals("VISIBLE"))
-                        {
-                            visible = true;
-                        }
-                    }
+                    visible = true;
+                }
+            }
+            else if (curLoc != null && homeLoc != null)
+            {
+                String mappedHomeLoc = map.mapSingle(homeLoc);
+                String mappedCurLoc = map.mapSingle(curLoc);
+                if (mappedHomeLoc.equals("VISIBLE") && mappedCurLoc.equals("VISIBLE"))
+                {
+                    visible = true;
                 }
             }
         }
