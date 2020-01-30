@@ -1197,7 +1197,7 @@ public class CustomLocationMixin extends SolrIndexerMixin
     {    
         String mappedHomeVis = visMap.mapSingle(homeLoc);
         String mappedHomeAvail = availMap.mapSingle(homeLoc);
-        if (homeLoc.equals("INTERNET") || curLoc.equals("INTERNET"))
+        if (homeLoc.equals("INTERNET") || (curLoc != null && curLoc.equals("INTERNET")))
         {
             resultSet.add("Online");
             return;
