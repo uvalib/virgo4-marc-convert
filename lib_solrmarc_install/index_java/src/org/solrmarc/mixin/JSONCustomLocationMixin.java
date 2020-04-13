@@ -51,6 +51,8 @@ public class JSONCustomLocationMixin extends SolrIndexerMixin
     Map<String, String> locationShadowedMap = null;
     Map<String, String> libraryAvailabilityMap = null;  /*  On Shelf or Request */
     Map<String, String> locationAvailabilityMap = null;  /*  Online  or  On Shelf  or Request */
+    Map<String, String> libraryCirculatingMap = null;  /*  true or false */
+    Map<String, String> locationCirculatingMap = null;  /*  true or false */
     private final static Logger logger = Logger.getLogger(JSONCustomLocationMixin.class);
 
     boolean isInited()
@@ -1041,6 +1043,53 @@ public class JSONCustomLocationMixin extends SolrIndexerMixin
         return (resultSet);
     }
 
+    public String getCustomCirculating(final Record record) throws Exception
+    {
+        String result = "false";
+        boolean circulating = false;
+        List<VariableField> fields999 = trimmedHoldingsList;
+//        AbstractMultiValueMapping locMap = ValueIndexerFactory.instance().createMultiValueMapping(locationMap);
+//        AbstractMultiValueMapping visMap = ValueIndexerFactory.instance().createMultiValueMapping(visibilityMap);
+//        AbstractMultiValueMapping libMap = ValueIndexerFactory.instance().createMultiValueMapping(libraryMap);
+        for (VariableField vfield : fields999)
+        {
+            DataField field = (DataField)vfield;
+            Subfield curLocF = field.getSubfield('k');
+            Subfield homeLocF = field.getSubfield('l');
+            Subfield libF = field.getSubfield('m');
+            Subfield shadowF = field.getSubfield('3');
+            String curLoc = (curLocF != null ? curLocF.getData() : null);
+            String homeLoc = (homeLocF != null ? homeLocF.getData() : null);
+            String lib = (libF != null ? libF.getData() : null);
+            boolean shadow = (shadowF != null ? shadowF.getData().length() > 0 : false);
+            String libCirculating = libraryCirculatingMap.get(lib);
+            if (curLoc != null)
+            {
+                String curLocCirculating = locationCirculatingMap.get(curLoc);
+                String mappedCurVis = locationShadowedMap.get(curLoc);
+                if (shadow || mappedCurVis.equals("HIDDEN")) continue; // this copy of the item is Hidden, go no further
+                if (curLocCirculating != null)
+                {
+                    if (libCirculating.equals("true") && curLocCirculating.equals("true"))
+                        circulating = true;
+                    continue; 
+                }
+            }
+            String mappedHomeVis = locationShadowedMap.get(homeLoc);
+            if (mappedHomeVis.equals("HIDDEN")) continue; // this copy of the item is Hidden, go no further
+//            if (mappedHomeLoc != null && mappedHomeLoc.contains("$"))
+//            {
+//                if (mappedLib != null) mappedHomeLoc = mappedHomeLoc.replaceAll("[$]m", mappedLib);
+//                else mappedHomeLoc = mappedHomeLoc.replaceAll("[$]m", "Library");
+//
+//            }
+            String homeLocCirculating = locationCirculatingMap.get(homeLoc);
+            if (libCirculating.equals("true") && homeLocCirculating.equals("true"))
+                circulating = true;   
+        }
+        return (circulating ? "true" : "false");
+    }
+
     public Set<String> getCustomAvailabilityForLocation(final Record record) throws Exception
     {
         Set<String> resultSet = new LinkedHashSet<String>();
@@ -1790,6 +1839,7 @@ public class JSONCustomLocationMixin extends SolrIndexerMixin
                         inArray = LIBRARIES_ARRAY;
                         libraryNameMap = new LinkedHashMap<String, String>();
                         libraryAvailabilityMap = new LinkedHashMap<String, String>();
+                        libraryCirculatingMap =  new LinkedHashMap<String, String>();
                     } 
                     else if (mname.equals("locations")) 
                     {
@@ -1797,6 +1847,7 @@ public class JSONCustomLocationMixin extends SolrIndexerMixin
                         locationNameMap = new LinkedHashMap<String, String>();
                         locationShadowedMap = new LinkedHashMap<String, String>();
                         locationAvailabilityMap = new LinkedHashMap<String, String>();
+                        locationCirculatingMap = new LinkedHashMap<String, String>();
                     }
                     
                     break;
@@ -1856,6 +1907,17 @@ public class JSONCustomLocationMixin extends SolrIndexerMixin
                         else if (inArray == LOCATIONS_ARRAY)
                         {
                             locationNameMap.put(curKey,  value);
+                        }
+                    } 
+                    else if (mname.equals("circulating")) 
+                    {
+                        if (inArray == LIBRARIES_ARRAY) 
+                        {
+                            libraryCirculatingMap.put(curKey,   (Boolean.parseBoolean(value) ? "true" : "false"));
+                        }
+                        else if (inArray == LOCATIONS_ARRAY)
+                        {
+                            locationCirculatingMap.put(curKey,   (Boolean.parseBoolean(value) ? "true" : "false"));
                         }
                     } 
 
