@@ -56,11 +56,20 @@ public class HathiIndexerMixin extends SolrIndexerMixin
                 {
                     labelStr = "";
                 }
-                else
+                else if (label.length() == 0 && defaultLabel.length() != 0)
                 {
-                    label = defaultLabel + label;
+                    label = defaultLabel;
                     labelStr = "||" + label;
                 }
+                else if (label.length() > 0 && defaultLabel.length() != 0)
+                {
+                    labelStr = "||" + label;
+                }
+//                else
+//                {
+//                    label = label;
+//                    labelStr = "||" + label;
+//                }
                 // default URL prefix is   http://hdl.handle.net/2027/
                 String value = defaultURL + identField.getData().trim() + labelStr;
                 sortedMap.put(sortlabel, value);
