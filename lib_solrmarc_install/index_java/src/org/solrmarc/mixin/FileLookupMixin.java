@@ -75,17 +75,26 @@ public class FileLookupMixin implements Mixin
             {
                 if (!exists.isEmpty())
                 {
+                    if (exists.contains("$key"))
+                    	exists = exists.replaceAll("[$]key", key);
                     result.add(exists);
                 }
-                return (result);
+                if (!notExists.isEmpty() && notExists.contains("$key"))
+                {
+                	notExists = notExists.replaceAll("[$]key", key);
+                    result.add(notExists);
+                }
+
+//                return (result);
             }
         }
-        if (result.isEmpty() && !notExists.isEmpty())
+        if (result.isEmpty() && !notExists.isEmpty() && !notExists.contains("$key"))
         {
             result.add(notExists);
         }
         return (result);
     }
+
 
     public Collection<String> mapLookupSelect(Collection<String> values, String sepPattern, String select)
     {
