@@ -11,6 +11,7 @@ import org.marc4j.MarcException;
 import org.marc4j.MarcReader;
 import org.marc4j.MarcReaderConfig;
 import org.marc4j.MarcReaderFactory;
+import org.marc4j.MarcScriptedRecordEditReader;
 import org.marc4j.marc.Record;
 import org.solrmarc.driver.SQSQueueDriver;
 
@@ -193,7 +194,15 @@ public class MarcSQSReader implements MarcReader
             {
                 byte[] expandedMessageBodyBytes = Base64.decode(messageBody);
                 MarcReader binreader = MarcReaderFactory.makeReader(config, new ByteArrayInputStream(expandedMessageBodyBytes));
-               //         new MarcPermissiveStreamReader(new ByteArrayInputStream(expandedMessageBodyBytes), true, true); 
+                if (binreader instanceof MarcScriptedRecordEditReader)
+                {
+                	logger.info("reader using script "+ config.getMarcRemapFilename());
+                }
+                else
+                {
+                	logger.info("reader NOT using script ");
+                }
+                //         new MarcPermissiveStreamReader(new ByteArrayInputStream(expandedMessageBodyBytes), true, true); 
                 try { 
                     rec = binreader.next();
                 }
