@@ -196,11 +196,11 @@ public class MarcSQSReader implements MarcReader
                 MarcReader binreader = MarcReaderFactory.makeReader(config, new ByteArrayInputStream(expandedMessageBodyBytes));
                 if (binreader instanceof MarcScriptedRecordEditReader)
                 {
-                	logger.info("reader using script "+ config.getMarcRemapFilename());
+                	logger.debug("reader using script "+ config.getMarcRemapFilename());
                 }
                 else
                 {
-                	logger.info("reader NOT using script ");
+                	logger.debug("reader NOT using script ");
                 }
                 //         new MarcPermissiveStreamReader(new ByteArrayInputStream(expandedMessageBodyBytes), true, true); 
                 try { 
