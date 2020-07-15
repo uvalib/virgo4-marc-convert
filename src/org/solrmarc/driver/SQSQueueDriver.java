@@ -114,7 +114,8 @@ public class SQSQueueDriver extends IndexDriver
     {
         String[] inputSource = new String[1];
         String propertyFileAsURLStr = PropertyUtils.getPropertyFileAbsoluteURL(homeDirStrs, options.valueOf(readOpts), true, inputSource);
-
+        logger.info("marcreader option is "+options.valueOf(readOpts));
+        logger.info("propertyFileAsURLStr is "+propertyFileAsURLStr);
         try
         {
             configureReaderProps(propertyFileAsURLStr);
