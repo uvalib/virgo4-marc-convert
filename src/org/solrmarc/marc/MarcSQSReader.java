@@ -133,6 +133,12 @@ public class MarcSQSReader implements MarcReader
             {
                 logger.error("Read queue " + this.queueName + " Failed to get the S3 object associated with large SQS message. ");
             }
+            catch(com.amazonaws.SdkClientException cas)
+            {
+                logger.error("Read queue " + this.queueName + " Failed trying to read SQS message. ");
+            	curMessages = null;
+            	curMessageIndex = 0;
+            }
         }
         if (Thread.currentThread().isInterrupted())
         {
