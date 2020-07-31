@@ -1220,6 +1220,10 @@ public class JSONCustomLocationMixin extends SolrIndexerMixin
             String homeLoc = (homeLocF != null ? homeLocF.getData() : null);
 //            String lib = (libF != null ? libF.getData() : null);
             boolean shadow = (shadowF != null ? shadowF.getData().length() > 0 : false);
+            if (shadow && homeLoc != null && homeLoc.equals("INTERNET"))
+            {
+            	shadow = false;
+            }
             // this test (and the change above to return aikl instead of ikl) added in response to JIRA ISSUE LIBSRVSRCHDISCOV-377
             if (callnum.matches(".*[Oo][Rr][Dd][Ee][Rr][- ]*0.*"))
             {
