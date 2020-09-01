@@ -18,7 +18,6 @@ import org.solrmarc.index.extractor.impl.custom.Mixin;
 public class ComparisonMixin implements Mixin
 {
     static SimpleDateFormat formatter = new SimpleDateFormat("yyyyMMdd");
-    static String curDateStr = formatter.format(new Date());
     static Pattern dateSwap = Pattern.compile("\\[([^ ]*) TO ([^\\]]*)\\]");
     static Pattern dateCheck = Pattern.compile("(....)-(..)-(..)");
     static Pattern yearCheck = Pattern.compile("(20|1\\d)\\d\\d");
@@ -133,7 +132,9 @@ public class ComparisonMixin implements Mixin
 
 	public Collection<String> mapDateComparisonNow(Collection<String> keys, String ifBefore, String ifEqual, String ifAfter)
     {
-        return  mapDateComparison(keys, curDateStr, ifBefore, ifEqual, ifAfter);
+	    SimpleDateFormat sformatter = new SimpleDateFormat("yyyyMMdd");
+	    String curDateStr = sformatter.format(new Date());
+	    return  mapDateComparison(keys, curDateStr, ifBefore, ifEqual, ifAfter);
     }
 
 	//   published_daterange = 008[7-14]?((008[6] == 'i' |008[6] == 'd' | 008[6] == 'm' | 008[6] == 'k' | 008[6] == 'q')&& 008[11-14] != "9999"),
