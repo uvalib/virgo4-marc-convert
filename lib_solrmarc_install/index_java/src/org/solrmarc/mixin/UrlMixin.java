@@ -135,6 +135,11 @@ public class UrlMixin extends SolrIndexerMixin
         List<Subfield> subs = (List<Subfield>)df.getSubfields();
         for (Subfield sf : subs)
         {
+            if (sf.getCode() == 'y')
+            {
+                label = label + sf.getData() + " ";
+                break;
+            }
             if (sf.getCode() == 'z' || sf.getCode() == '3')
             {
                 label = label + sf.getData() + " ";
