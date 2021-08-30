@@ -43,7 +43,7 @@ import org.solrmarc.tools.SolrMarcDataException.eDataErrorLevel;
 
 public class JSONCustomLocationMixin extends SolrIndexerMixin
 {
-    final static long oneDayInMillis = 1000 * 60 * 60 * 24; 
+    final static long oneDayInMillis = 1000 * 60 * 60; 
     static long currentMillisInited = 0L;
     static String JSONLookupURL = null;
     Map<String, String> libraryNameMap = null;
