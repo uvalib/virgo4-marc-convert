@@ -43,21 +43,23 @@ import org.solrmarc.tools.SolrMarcDataException.eDataErrorLevel;
 
 public class JSONCustomLocationMixin extends SolrIndexerMixin
 {
-    final static long oneDayInMillis = 1000 * 60 * 60; 
+    final static long oneDayInMillis = 1000 * 60 * 60 * 24; 
+    final static long oneHourInMillis = 1000 * 60 * 60; 
     static long currentMillisInited = 0L;
     static String JSONLookupURL = null;
-    Map<String, String> libraryNameMap = null;
-    Map<String, String> locationNameMap = null;
-    Map<String, String> locationShadowedMap = null;
-    Map<String, String> libraryAvailabilityMap = null;  /*  On Shelf or Request */
-    Map<String, String> locationAvailabilityMap = null;  /*  Online  or  On Shelf  or Request */
-    Map<String, String> libraryCirculatingMap = null;  /*  true or false */
-    Map<String, String> locationCirculatingMap = null;  /*  true or false */
+    static Object semaphore = new Object();
+    static Map<String, String> libraryNameMap = null;
+    static Map<String, String> locationNameMap = null;
+    static Map<String, String> locationShadowedMap = null;
+    static Map<String, String> libraryAvailabilityMap = null;  /*  On Shelf or Request */
+    static Map<String, String> locationAvailabilityMap = null;  /*  Online  or  On Shelf  or Request */
+    static Map<String, String> libraryCirculatingMap = null;  /*  true or false */
+    static Map<String, String> locationCirculatingMap = null;  /*  true or false */
     private final static Logger logger = Logger.getLogger(JSONCustomLocationMixin.class);
 
     boolean isInited()
     {
-        if (JSONLookupURL != null && libraryNameMap != null &&  System.currentTimeMillis() - currentMillisInited < oneDayInMillis ) 
+        if (JSONLookupURL != null && libraryNameMap != null &&  System.currentTimeMillis() - currentMillisInited < oneHourInMillis ) 
         {
             return (true);
         }
@@ -102,9 +104,15 @@ public class JSONCustomLocationMixin extends SolrIndexerMixin
     {
         if (!isInited())
         {
-            JSONLookupURL = System.getProperty("solrmarc.sirsi.location.url");
-            initMapsFromJSON(JSONLookupURL);
-            currentMillisInited = System.currentTimeMillis();
+            synchronized (semaphore) 
+            {
+            	if (!isInited()) 
+            	{
+            		JSONLookupURL = System.getProperty("solrmarc.sirsi.location.url");
+            		initMapsFromJSON(JSONLookupURL);
+            		currentMillisInited = System.currentTimeMillis();
+            	}
+            }
         }
         
         trimmedHoldingsList = getTrimmedHoldingsList(record, "999");
@@ -1779,6 +1787,7 @@ public class JSONCustomLocationMixin extends SolrIndexerMixin
         {
             JSONLookupURL = "https://ils-connector-ws-dev.internal.lib.virginia.edu/v4/availability/list";
         }
+
         URL url;
         HttpURLConnection connection = null;
         BufferedReader reader = null;
@@ -1792,8 +1801,11 @@ public class JSONCustomLocationMixin extends SolrIndexerMixin
                     JsonParser.OPT_UNQUOTED_KEYWORDS |
                     JsonParser.OPT_SINGLE_QUOTE_STRINGS);
             parser.setInput("availability/list", reader, false);
-            parseAllInput(parser);
-            logger.info("Data successfully read from URL: "+ JSONLookupURL );          
+            int result = parseAllInput(parser);
+            if (result == 0)
+            {
+            	logger.info("Data successfully read from URL: "+ JSONLookupURL );          
+            }
         }
         catch (MalformedURLException e)
         {
@@ -1816,6 +1828,13 @@ public class JSONCustomLocationMixin extends SolrIndexerMixin
         String curKey = null;
         int inArray = NO_ARRAY;
         int parserLevel = 0;
+        Map<String, String> tmpLibraryNameMap = null;
+        Map<String, String> tmpLocationNameMap = null;
+        Map<String, String> tmpLocationShadowedMap = null;
+        Map<String, String> tmpLibraryAvailabilityMap = null;  /*  On Shelf or Request */
+        Map<String, String> tmpLocationAvailabilityMap = null;  /*  Online  or  On Shelf  or Request */
+        Map<String, String> tmpLibraryCirculatingMap = null;  /*  true or false */
+        Map<String, String> tmpLocationCirculatingMap = null;  /*  true or false */
         
         while (true) {
             final String mname = parser.getMemberName();
@@ -1833,7 +1852,20 @@ public class JSONCustomLocationMixin extends SolrIndexerMixin
                     parserLevel--;
                     if (parserLevel == 0) 
                     {
-                        return 0;
+                        if (tmpLibraryNameMap != null && tmpLocationNameMap != null && tmpLocationShadowedMap != null && 
+                        		tmpLibraryAvailabilityMap != null && tmpLocationAvailabilityMap != null && 
+                        		tmpLibraryCirculatingMap != null && tmpLocationCirculatingMap != null)
+                        {
+                        	libraryNameMap = tmpLibraryNameMap;
+	                        locationNameMap = tmpLocationNameMap;
+	                        locationShadowedMap = tmpLocationShadowedMap;
+	                        libraryAvailabilityMap = tmpLibraryAvailabilityMap;  /*  On Shelf or Request */
+	                        locationAvailabilityMap = tmpLocationAvailabilityMap;  /*  Online  or  On Shelf  or Request */
+	                        libraryCirculatingMap = tmpLibraryCirculatingMap;  /*  true or false */
+	                        locationCirculatingMap = tmpLocationCirculatingMap;  /*  true or false */
+	                        return 0 ;
+                        }
+                        return -1;
                     } 
 
                     break;
@@ -1841,17 +1873,17 @@ public class JSONCustomLocationMixin extends SolrIndexerMixin
                     if (mname.equals("libraries")) 
                     {
                         inArray = LIBRARIES_ARRAY;
-                        libraryNameMap = new LinkedHashMap<String, String>();
-                        libraryAvailabilityMap = new LinkedHashMap<String, String>();
-                        libraryCirculatingMap =  new LinkedHashMap<String, String>();
+                        tmpLibraryNameMap = new LinkedHashMap<String, String>();
+                        tmpLibraryAvailabilityMap = new LinkedHashMap<String, String>();
+                        tmpLibraryCirculatingMap =  new LinkedHashMap<String, String>();
                     } 
                     else if (mname.equals("locations")) 
                     {
                         inArray = LOCATIONS_ARRAY;
-                        locationNameMap = new LinkedHashMap<String, String>();
-                        locationShadowedMap = new LinkedHashMap<String, String>();
-                        locationAvailabilityMap = new LinkedHashMap<String, String>();
-                        locationCirculatingMap = new LinkedHashMap<String, String>();
+                        tmpLocationNameMap = new LinkedHashMap<String, String>();
+                        tmpLocationShadowedMap = new LinkedHashMap<String, String>();
+                        tmpLocationAvailabilityMap = new LinkedHashMap<String, String>();
+                        tmpLocationCirculatingMap = new LinkedHashMap<String, String>();
                     }
                     
                     break;
@@ -1881,47 +1913,47 @@ public class JSONCustomLocationMixin extends SolrIndexerMixin
                     {
                         if (inArray == LIBRARIES_ARRAY) 
                         {
-                            libraryAvailabilityMap.put(curKey,  (Boolean.parseBoolean(value) ? "On shelf" : "Request"));
+                        	tmpLibraryAvailabilityMap.put(curKey,  (Boolean.parseBoolean(value) ? "On shelf" : "Request"));
                         }
                         else if (inArray == LOCATIONS_ARRAY)
                         {
-                            locationAvailabilityMap.put(curKey,  (Boolean.parseBoolean(value) ? "On shelf" : "Request"));
+                        	tmpLocationAvailabilityMap.put(curKey,  (Boolean.parseBoolean(value) ? "On shelf" : "Request"));
                         }
                     } 
                     else if (mname.equals("online"))
                     {
                         if (inArray == LOCATIONS_ARRAY && Boolean.parseBoolean(value) == true)
                         {
-                            locationAvailabilityMap.put(curKey,  "Online");
+                        	tmpLocationAvailabilityMap.put(curKey,  "Online");
                         }
                     } 
                     else if (mname.equals("shadowed"))
                     {
                        if (inArray == LOCATIONS_ARRAY)
                         {
-                            locationShadowedMap.put(curKey,  (Boolean.parseBoolean(value) ? "HIDDEN" : "VISIBLE"));
+                    	   tmpLocationShadowedMap.put(curKey,  (Boolean.parseBoolean(value) ? "HIDDEN" : "VISIBLE"));
                         }
                     } 
                     else if (mname.equals("description")) 
                     {
                         if (inArray == LIBRARIES_ARRAY) 
                         {
-                            libraryNameMap.put(curKey,  value);
+                        	tmpLibraryNameMap.put(curKey,  value);
                         }
                         else if (inArray == LOCATIONS_ARRAY)
                         {
-                            locationNameMap.put(curKey,  value);
+                        	tmpLocationNameMap.put(curKey,  value);
                         }
                     } 
                     else if (mname.equals("circulating")) 
                     {
                         if (inArray == LIBRARIES_ARRAY) 
                         {
-                            libraryCirculatingMap.put(curKey,   (Boolean.parseBoolean(value) ? "true" : "false"));
+                        	tmpLibraryCirculatingMap.put(curKey,   (Boolean.parseBoolean(value) ? "true" : "false"));
                         }
                         else if (inArray == LOCATIONS_ARRAY)
                         {
-                            locationCirculatingMap.put(curKey,   (Boolean.parseBoolean(value) ? "true" : "false"));
+                        	tmpLocationCirculatingMap.put(curKey,   (Boolean.parseBoolean(value) ? "true" : "false"));
                         }
                     } 
 
@@ -1931,8 +1963,6 @@ public class JSONCustomLocationMixin extends SolrIndexerMixin
             }
             code = parser.next();
         }
-
-        // return record;
     }
 
 }
