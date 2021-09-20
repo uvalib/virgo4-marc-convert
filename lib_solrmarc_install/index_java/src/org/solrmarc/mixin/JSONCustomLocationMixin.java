@@ -956,7 +956,8 @@ public class JSONCustomLocationMixin extends SolrIndexerMixin
             if (curLoc != null)
             {
                 String mappedCurLoc = locOverrideMap.mapSingle(curLoc);
-                if (mappedCurLoc == null) mappedCurLoc = locationNameMap.get(curLoc);
+                String mappedCurLocName = locationNameMap.get(curLoc);
+                if (mappedCurLoc == null) mappedCurLoc = mappedCurLocName;
                 String mappedCurVis = locationShadowedMap.get(curLoc);
                 if (shadow || mappedCurVis.equals("HIDDEN")) continue; // this copy of the item is Hidden, go no further
                 if (mappedCurLoc != null && mappedCurLoc.length() > 0)
@@ -969,7 +970,11 @@ public class JSONCustomLocationMixin extends SolrIndexerMixin
                     {
                         mappedCurLoc = mappedCurLoc.replaceAll("[$]m[ ]?", "");
                     }
-                    if (mappedCurLoc.contains("$l") && mappedHomeLocName != null)
+                    if (mappedCurLoc.contains("$l") && mappedCurLocName != null)
+                    {
+                        mappedCurLoc = mappedCurLoc.replaceAll("[$]l", mappedCurLocName);
+                    }
+                    else if (mappedCurLoc.contains("$l") && mappedHomeLocName != null)
                     {
                         mappedCurLoc = mappedCurLoc.replaceAll("[$]l", mappedHomeLocName);
                     }
