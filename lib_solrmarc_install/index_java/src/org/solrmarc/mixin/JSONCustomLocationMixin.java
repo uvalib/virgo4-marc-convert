@@ -991,8 +991,8 @@ public class JSONCustomLocationMixin extends SolrIndexerMixin
             {
                 if (mappedLib != null) mappedHomeLoc = mappedHomeLoc.replaceAll("[$]m", mappedLib);
                 else mappedHomeLoc = mappedHomeLoc.replaceAll("[$]m", "Library");
-                if (mappedHomeLocName != null) mappedHomeLoc = mappedHomeLoc.replaceAll("[$]l", mappedHomeLocName);
-                else mappedHomeLoc = mappedHomeLoc.replaceAll("[$]l", "Undefined");
+                if (mappedHomeLocName != null) mappedHomeLoc = mappedHomeLoc.replaceAll("[$]l[k]?", mappedHomeLocName);
+                else mappedHomeLoc = mappedHomeLoc.replaceAll("[$]l[k]?", "Undefined");
             }
             if (mappedHomeLoc != null) resultSet.add(mappedHomeLoc);
         }
