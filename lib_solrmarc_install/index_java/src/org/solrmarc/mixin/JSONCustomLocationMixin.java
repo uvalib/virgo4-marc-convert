@@ -976,7 +976,7 @@ public class JSONCustomLocationMixin extends SolrIndexerMixin
                     }
                     else if (mappedCurLoc.contains("$l") && mappedHomeLocName != null)
                     {
-                        mappedCurLoc = mappedCurLoc.replaceAll("[$]l", mappedHomeLocName);
+                        mappedCurLoc = mappedCurLoc.replaceAll("[$]l[k]?", mappedHomeLocName);
                     }
                     else if (mappedCurLoc.contains("$l") && mappedHomeLocName == null)
                     {
