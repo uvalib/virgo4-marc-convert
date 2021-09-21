@@ -970,9 +970,9 @@ public class JSONCustomLocationMixin extends SolrIndexerMixin
                     {
                         mappedCurLoc = mappedCurLoc.replaceAll("[$]m[ ]?", "");
                     }
-                    if (mappedCurLoc.contains("$l") && mappedCurLocName != null)
+                    if (mappedCurLoc.contains("$lk") && mappedCurLocName != null)
                     {
-                        mappedCurLoc = mappedCurLoc.replaceAll("[$]l", mappedCurLocName);
+                        mappedCurLoc = mappedCurLoc.replaceAll("[$]lk", mappedCurLocName);
                     }
                     else if (mappedCurLoc.contains("$l") && mappedHomeLocName != null)
                     {
@@ -980,7 +980,7 @@ public class JSONCustomLocationMixin extends SolrIndexerMixin
                     }
                     else if (mappedCurLoc.contains("$l") && mappedHomeLocName == null)
                     {
-                        mappedCurLoc = mappedCurLoc.replaceAll("[ ]?[$]l", "");
+                        mappedCurLoc = mappedCurLoc.replaceAll("[ ]?[$]l[k]?", "");
                     }
                     resultSet.add(mappedCurLoc);
                     continue; // Used
