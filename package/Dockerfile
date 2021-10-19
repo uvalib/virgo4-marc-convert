@@ -2,7 +2,7 @@
 # build the target application
 #
 FROM openjdk:8 as builder
-RUN apt-get update && apt-get -y install ant
+RUN apt-get update && apt-get upgrade && apt-get -y install ant
 WORKDIR /build
 COPY build.xml ./
 COPY src ./src
@@ -16,7 +16,7 @@ RUN ant
 FROM openjdk:8
 
 # update packages
-RUN apt-get update
+RUN apt-get update && apt-get upgrade
 
 # Create the run user and group
 RUN groupadd webservice && useradd -g webservice webservice
