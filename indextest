@@ -1,0 +1,51 @@
+#!/bin/bash
+set -o nounset
+set -o errexit
+
+SCRIPTDIR=$PWD
+COREDIR=$PWD
+corename=test_core
+DATADIR=$COREDIR/data
+
+solrmarc_dir=$SCRIPTDIR/lib_solrmarc_install
+solrmarc_jar_name=`ls -t $solrmarc_dir  | egrep "solrmarc_core" | egrep "[.]jar$" | head -1`
+solrmarc_jar="$solrmarc_dir/$solrmarc_jar_name"
+
+# load the shared bash functions log, vlog and Verbose
+#. $BASEDIR/bin/outputfuncs.bash
+
+# load the functions for posting solr add documents to a solr server
+#. $BASEDIR/bin/postfuncs.bash
+
+# $SCRIPTDIR/index_into_solr_using_solrmarc3 $verbose "$url" "$solrname" "$config" "$updatefile" "$updatedel"
+#THREAD_OPTS="-Dsolrmarc.indexer.threadcount=4 -Dsolrmarc.track.solr.progress=true"
+THREAD_OPTS=
+
+url="http://libsvr40.lib.virginia.edu:8986/solr/$corename"
+
+if [[ "$1" == "-t" ]]; then
+    url=stdout
+    shift
+fi
+
+config="$1"
+
+if [[ "$config" == "sirsi" ]] ; then 
+    solrmarcconfig="solr7_index.properties,rda_index_and_maps.properties,solr7_sirsi_index.properties"
+elif [[ "$config" == "hathi" ]] ; then
+    solrmarcconfig="solr7_index.properties,rda_index_and_maps.properties,solr7_hathi_index.properties"
+else
+    echo "Must specify the type of records (e.g.  sirsi  hathi  etc)"
+    exit 1
+fi
+
+updatefile=$2
+
+echo "    Indexing `basename $updatefile` using config $solrmarcconfig into url $url"
+
+/lib_content23/java_1.8.0/jdk1.8.0/bin/java $THREAD_OPTS -jar $solrmarc_jar IndexDriver -dir $solrmarc_dir -config "$solrmarcconfig" -solrURL $url $updatefile 
+returncode=${PIPESTATUS[0]}
+
+
+exit $returncode
+
