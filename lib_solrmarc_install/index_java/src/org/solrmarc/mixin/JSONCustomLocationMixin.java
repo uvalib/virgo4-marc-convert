@@ -68,11 +68,6 @@ public class JSONCustomLocationMixin extends SolrIndexerMixin
     
     final static MarcFactory factory = MarcFactory.newInstance();
 
-    Set<String> callNumberFieldList = null;
-    Set<String> callNumberFieldListNo050 = null;
-    Map<String, Set<String>> callNumberClusterMap = null;
-    Map<String, Set<String>> callNumberClusterMapNo050 = null;
-    Set<String> callNumberLCFieldList = null;
 
     Comparator<String> normedComparator = new Comparator<String>()
     {
@@ -84,13 +79,6 @@ public class JSONCustomLocationMixin extends SolrIndexerMixin
         }
     };
 
-    String bestSingleCallNumber = null;
-    String bestSingleLCCallNumber = null;
-    List<VariableField> trimmedHoldingsList = null;
-    String bestAuthor = null;
-    String bestAuthorCutter = null;
-    String pubYear = null;
-    private String bestDate;
     Pattern datePattern = Pattern.compile("[^0-9]*((20|1[56789])[0-9][0-9])[^0-9]*.*");
 
     /**
@@ -114,51 +102,53 @@ public class JSONCustomLocationMixin extends SolrIndexerMixin
             	}
             }
         }
-        
-        trimmedHoldingsList = getTrimmedHoldingsList(record, "999");
-
-        callNumberFieldListNo050 = getCallNumberFieldSetNo050(record, trimmedHoldingsList);
-        callNumberFieldList = getCallNumberFieldSet(record, callNumberFieldListNo050);
-        callNumberLCFieldList = getLCCallNumberFieldSet090(record, callNumberFieldListNo050);
-        callNumberClusterMapNo050 = getCallNumbersCleanedConflated(callNumberFieldListNo050, true);
-        callNumberClusterMap = getCallNumbersCleanedConflated(callNumberFieldList, true);
-        String valueArr[] = callNumberLCFieldList.toArray(new String[0]);
-        //Comparator<String> comp = new StringNaturalCompare();
-        //Arrays.sort(valueArr, comp);
-
-        bestSingleCallNumber = getBestSingleCallNumber(callNumberClusterMap);
-        bestSingleLCCallNumber = valueArr.length > 0 ? normalizeLCCallNumber(valueArr[0]) : null;
-        List<String> author =  SolrIndexer.instance().getFieldListAsList(record, "100a:110a:111a:130a");
-        if (author.size() > 0)
-        {
-            bestAuthor = author.get(0);
-            bestAuthorCutter = org.solrmarc.callnum.Utils.getCutterFromAuthor(bestAuthor);
-        }
-        else
-        {
-            bestAuthor = null;
-            bestAuthorCutter = null;
-        }
-        List<String> dates =  SolrIndexer.instance().getFieldListAsList(record, "008[7-10]:260c:264c");
-        bestDate = "";
-        for (String date : dates)
-        {
-            Matcher m = datePattern.matcher(date);
-            if (m.matches()) 
-            {
-                bestDate = m.group(1);
-                break;
-            }
-        }
-        if (bestSingleCallNumber  != null && bestSingleCallNumber.equals(bestSingleLCCallNumber))
-        {
-            if (valueArr.length == 0)
-            {
-                callNumberLCFieldList = getLCCallNumberFieldSet090(record, callNumberFieldListNo050);
-            }
-        }
     }
-
+    
+//    private void localInit(Record record)
+//    {
+//        List<VariableField> trimmedHoldingsList = getTrimmedHoldingsList(record, "999");
+//        Set<String> callNumberFieldListNo050 = getCallNumberFieldSetNo050(record, trimmedHoldingsList);
+//        Set<String> callNumberFieldList = getCallNumberFieldSet(record, callNumberFieldListNo050);
+//        Set<String> callNumberLCFieldList = getLCCallNumberFieldSet090(record, callNumberFieldListNo050);;
+//        Map<String, Set<String>> callNumberClusterMapNo050 = getCallNumbersCleanedConflated(callNumberFieldListNo050, true);
+//        Map<String, Set<String>> callNumberClusterMap = getCallNumbersCleanedConflated(callNumberFieldList, true);
+//        String bestSingleCallNumber = getBestSingleCallNumber(callNumberClusterMap);
+//       
+//        String valueArr[] = callNumberLCFieldList.toArray(new String[0]);
+//        String bestSingleLCCallNumber = valueArr.length > 0 ? normalizeLCCallNumber(valueArr[0]) : null;
+//        String bestAuthor = null;
+//        String bestAuthorCutter = null;
+//        String pubYear = null;
+//        String bestDate;
+//        
+//
+//        //Comparator<String> comp = new StringNaturalCompare();
+//        //Arrays.sort(valueArr, comp);
+//
+//        List<String> author =  SolrIndexer.instance().getFieldListAsList(record, "100a:110a:111a:130a");
+//        if (author.size() > 0)
+//        {
+//            bestAuthor = author.get(0);
+//            bestAuthorCutter = org.solrmarc.callnum.Utils.getCutterFromAuthor(bestAuthor);
+//        }
+//        else
+//        {
+//            bestAuthor = null;
+//            bestAuthorCutter = null;
+//        }
+//        List<String> dates =  SolrIndexer.instance().getFieldListAsList(record, "008[7-10]:260c:264c");
+//        bestDate = "";
+//        for (String date : dates)
+//        {
+//            Matcher m = datePattern.matcher(date);
+//            if (m.matches()) 
+//            {
+//                bestDate = m.group(1);
+//                break;
+//            }
+//        }
+//    }
+    
     private List<VariableField> getTrimmedHoldingsList(Record record, String holdingsTag)
     {
         List<VariableField> result = record.getVariableFields(holdingsTag);
@@ -185,8 +175,6 @@ public class JSONCustomLocationMixin extends SolrIndexerMixin
 
     private void removeLostHoldings(List<VariableField> fields999)
     {
-        // String mapName = loadTranslationMap(null, "shadowed_location_map.properties");
-//        AbstractMultiValueMapping locationMap = ValueIndexerFactory.instance().createMultiValueMapping("shadowed_location_map.properties");
         Iterator<VariableField> iter = fields999.iterator();
         while (iter.hasNext())
         {
@@ -229,6 +217,16 @@ public class JSONCustomLocationMixin extends SolrIndexerMixin
         String[] bestSet = getBestCallNumberSubset(resultNormed);
         if (bestSet.length == 0) return (null);
         String result = normalizeLCCallNumber(bestSet[0]);
+        return (result);
+    }
+
+    private String getBestSingleCallNumber(Record record)
+    {
+        List<VariableField> trimmedHoldingsList = getTrimmedHoldingsList(record, "999");
+        Set<String> callNumberFieldListNo050 = getCallNumberFieldSetNo050(record, trimmedHoldingsList);
+        Set<String> callNumberFieldList = getCallNumberFieldSet(record, callNumberFieldListNo050);
+        Map<String, Set<String>> callNumberClusterMap = getCallNumbersCleanedConflated(callNumberFieldList, true);
+        String result = getBestSingleCallNumber(callNumberClusterMap);
         return (result);
     }
 
@@ -474,7 +472,7 @@ public class JSONCustomLocationMixin extends SolrIndexerMixin
     {
         AbstractMultiValueMapping transMap = ValueIndexerFactory.instance().createMultiValueMapping(mapName);
 
-        String val = bestSingleCallNumber;
+        String val = getBestSingleCallNumber(record);
         String result = null;
         if (val == null || val.length() == 0)
         {
@@ -556,7 +554,7 @@ public class JSONCustomLocationMixin extends SolrIndexerMixin
     public String getCallNumberCleanedNew(final Record record, String sortable)
     {
         boolean sortableFlag = (sortable != null && (sortable.equals("sortable") || sortable.equals("true")));
-        String result = bestSingleCallNumber;
+        String result = getBestSingleCallNumber(record);
         if (result == null) return (result);
         String resultParts[] = result.split(":", 2);
         if (sortableFlag && (resultParts[0].equals("LC") || (resultParts[0].equals("") && CallNumUtils.isValidLC(resultParts[1])))) 
@@ -583,7 +581,7 @@ public class JSONCustomLocationMixin extends SolrIndexerMixin
     
     public String getShelfKey(final Record record)
     {
-        String callnum = bestSingleCallNumber;
+        String callnum = getBestSingleCallNumber(record);
         String result = null;
         if (callnum == null) return (null);
         String resultParts[] = callnum.split(":", 2);
@@ -604,7 +602,7 @@ public class JSONCustomLocationMixin extends SolrIndexerMixin
 
     public String getLCShelfKey(final Record record)
     {
-        String callnum = bestSingleLCCallNumber;
+        String callnum = getBestSingleCallNumber(record);
         String result = null;
         if (callnum == null) return (null);
         String resultParts[] = callnum.split(":", 2);
@@ -625,8 +623,34 @@ public class JSONCustomLocationMixin extends SolrIndexerMixin
 
     public String getUniquishLCCallNumber(final Record record)
     {
-        String callnum = bestSingleLCCallNumber;
+        String callnum = getBestSingleCallNumber(record);
         if (callnum == null) return (null);
+        List<String> author =  SolrIndexer.instance().getFieldListAsList(record, "100a:110a:111a:130a");
+        String bestAuthor = null;
+        String bestAuthorCutter = null;
+        String pubYear = null;
+        String bestDate;
+        if (author.size() > 0)
+        {
+        	bestAuthor = author.get(0);
+        	bestAuthorCutter = org.solrmarc.callnum.Utils.getCutterFromAuthor(bestAuthor);
+        }
+        else
+        {
+        	bestAuthor = null;
+        	bestAuthorCutter = null;
+        }
+        List<String> dates =  SolrIndexer.instance().getFieldListAsList(record, "008[7-10]:260c:264c");
+        bestDate = "";
+        for (String date : dates)
+        {
+        	Matcher m = datePattern.matcher(date);
+        	if (m.matches()) 
+        	{
+        		bestDate = m.group(1);
+        		break;
+        	}
+        }
         if (bestAuthorCutter != null && !callnum.contains(bestAuthorCutter) && callnum.matches(".*[A-Z][0-9]+")) 
         {
             callnum = callnum + "." + bestAuthorCutter;
@@ -732,17 +756,32 @@ public class JSONCustomLocationMixin extends SolrIndexerMixin
     }
     public String getBestLCCallNumber(final Record record)
     {
+        List<VariableField> trimmedHoldingsList = getTrimmedHoldingsList(record, "999");
+        Set<String> callNumberFieldListNo050 = getCallNumberFieldSetNo050(record, trimmedHoldingsList);
+        Set<String> callNumberLCFieldList = getLCCallNumberFieldSet090(record, callNumberFieldListNo050);;
+       
+        String valueArr[] = callNumberLCFieldList.toArray(new String[0]);
+        String bestSingleLCCallNumber = valueArr.length > 0 ? normalizeLCCallNumber(valueArr[0]) : null;
         return(bestSingleLCCallNumber);
     }
 
     public Set<String> getCallNumbersCleanedNewNo050(final Record record, String conflatePrefixes)
     {
-        return (getCallNumbersCleanedNew(record, conflatePrefixes, this.callNumberFieldListNo050, this.callNumberClusterMapNo050));
+        List<VariableField> trimmedHoldingsList = getTrimmedHoldingsList(record, "999");
+        Set<String> callNumberFieldListNo050 = getCallNumberFieldSetNo050(record, trimmedHoldingsList);
+        Map<String, Set<String>> callNumberClusterMapNo050 = getCallNumbersCleanedConflated(callNumberFieldListNo050, true);
+       
+        return (getCallNumbersCleanedNew(record, conflatePrefixes, callNumberFieldListNo050, callNumberClusterMapNo050));
     }
 
     public Set<String> getCallNumbersCleanedNew(final Record record, String conflatePrefixes)
     {
-        return (getCallNumbersCleanedNew(record, conflatePrefixes, this.callNumberFieldList, this.callNumberClusterMap));
+        List<VariableField> trimmedHoldingsList = getTrimmedHoldingsList(record, "999");
+        Set<String> callNumberFieldListNo050 = getCallNumberFieldSetNo050(record, trimmedHoldingsList);
+        Set<String> callNumberFieldList = getCallNumberFieldSet(record, callNumberFieldListNo050);
+        Map<String, Set<String>> callNumberClusterMap = getCallNumbersCleanedConflated(callNumberFieldList, true);
+       
+        return (getCallNumbersCleanedNew(record, conflatePrefixes, callNumberFieldList, callNumberClusterMap));
     }
 
     private String getCommonPrefix(String string1, String string2, Comparator<String> comp)
@@ -892,9 +931,8 @@ public class JSONCustomLocationMixin extends SolrIndexerMixin
     public Set<String> getCustomLibrary(final Record record) throws Exception
     {
         Set<String> resultSet = new LinkedHashSet<String>();
+        List<VariableField> trimmedHoldingsList = getTrimmedHoldingsList(record, "999");
         List<VariableField> fields999 = trimmedHoldingsList;
-//        AbstractMultiValueMapping visMap = ValueIndexerFactory.instance().createMultiValueMapping(visibilityMap);
-//        AbstractMultiValueMapping libMap = ValueIndexerFactory.instance().createMultiValueMapping(libraryMap);
 
         for (VariableField vfield :fields999)
         {
@@ -927,10 +965,10 @@ public class JSONCustomLocationMixin extends SolrIndexerMixin
     public Set<String> getCustomLocationWithOverride(final Record record, String locationOverrideMap) throws Exception
     {
         Set<String> resultSet = new LinkedHashSet<String>();
+        List<VariableField> trimmedHoldingsList = getTrimmedHoldingsList(record, "999");
         List<VariableField> fields999 = trimmedHoldingsList;
         AbstractMultiValueMapping locOverrideMap = ValueIndexerFactory.instance().createMultiValueMapping(locationOverrideMap);
-//        AbstractMultiValueMapping visMap = ValueIndexerFactory.instance().createMultiValueMapping(visibilityMap);
-//        AbstractMultiValueMapping libMap = ValueIndexerFactory.instance().createMultiValueMapping(libraryMap);
+
         for (VariableField vfield : fields999)
         {
             DataField field = (DataField)vfield;
@@ -1002,10 +1040,9 @@ public class JSONCustomLocationMixin extends SolrIndexerMixin
     public Set<String> getCustomLocation(final Record record) throws Exception
     {
         Set<String> resultSet = new LinkedHashSet<String>();
+        List<VariableField> trimmedHoldingsList = getTrimmedHoldingsList(record, "999");
         List<VariableField> fields999 = trimmedHoldingsList;
-//        AbstractMultiValueMapping locMap = ValueIndexerFactory.instance().createMultiValueMapping(locationMap);
-//        AbstractMultiValueMapping visMap = ValueIndexerFactory.instance().createMultiValueMapping(visibilityMap);
-//        AbstractMultiValueMapping libMap = ValueIndexerFactory.instance().createMultiValueMapping(libraryMap);
+
         for (VariableField vfield : fields999)
         {
             DataField field = (DataField)vfield;
@@ -1060,10 +1097,9 @@ public class JSONCustomLocationMixin extends SolrIndexerMixin
     {
         String result = "false";
         boolean circulating = false;
+        List<VariableField> trimmedHoldingsList = getTrimmedHoldingsList(record, "999");
         List<VariableField> fields999 = trimmedHoldingsList;
-//        AbstractMultiValueMapping locMap = ValueIndexerFactory.instance().createMultiValueMapping(locationMap);
-//        AbstractMultiValueMapping visMap = ValueIndexerFactory.instance().createMultiValueMapping(visibilityMap);
-//        AbstractMultiValueMapping libMap = ValueIndexerFactory.instance().createMultiValueMapping(libraryMap);
+
         for (VariableField vfield : fields999)
         {
             DataField field = (DataField)vfield;
@@ -1106,7 +1142,9 @@ public class JSONCustomLocationMixin extends SolrIndexerMixin
     public Set<String> getCustomAvailabilityForLocation(final Record record) throws Exception
     {
         Set<String> resultSet = new LinkedHashSet<String>();
+        List<VariableField> trimmedHoldingsList = getTrimmedHoldingsList(record, "999");
         List<VariableField> fields999 = trimmedHoldingsList;
+
         for (VariableField vfield : fields999)
         {
             DataField field = (DataField)vfield;
@@ -1125,52 +1163,6 @@ public class JSONCustomLocationMixin extends SolrIndexerMixin
         }
         return (resultSet);
     }
-    /*
-     C:/Users/rh9ec/Development/Projects/solrmarc-3.0/test/data/records/locations_unique.txt  C:/Users/rh9ec/Development/Projects/solrmarc-3.0/test/data/translation_maps/location_availability_map.properties   C:/Users/rh9ec/Development/Projects/solrmarc-3.0/test/data/translation_maps/shadowed_location_map.properties  C:/Users/rh9ec/Development/Projects/solrmarc-3.0/test/data/translation_maps/library_map.properties
-     */
-    
-//    public static void main(String[] args)
-//    {
-//        try
-//        {
-//            testCustomAvailabilityForLocation(args[0], args[1], args[2]);
-//        }
-//        catch (Exception e)
-//        {
-//            // TODO Auto-generated catch block
-//            e.printStackTrace();
-//        }
-//    }
-//    
-//    public static void testCustomAvailabilityForLocation(String filename, String homeDir, String sirsiAvailabilityURL) throws Exception
-//    {
-//        System.setProperty("solrmarc.sirsi.location.url", sirsiAvailabilityURL);
-//        BufferedReader reader = new BufferedReader(new InputStreamReader(new FileInputStream(filename)));
-//        String homeDirs[] = new String[1];
-//        homeDirs[0] = homeDir;
-//        ValueIndexerFactory.initialize(homeDirs);
-//        String line;
-//        while ((line = reader.readLine()) != null)
-//        {
-//            Set<String> resultSet = new LinkedHashSet<String>();
-//
-//            String lineParts[] = line.split("[|]");
-//            String sampleID = lineParts[0];
-//            String curLoc = lineParts[1];
-//            String homeLoc = lineParts[2];
-//            String lib = lineParts[3];
-//            addCustomAvailabilityForLocation(resultSet, curLoc, homeLoc, lib);
-//            StringBuilder sb = new StringBuilder();
-//            for (String member : resultSet)
-//            {
-//                sb.append(" : ");
-//                sb.append(member);
-//            }
-//            if (sb.length() == 0) sb.append(" : HIDDEN");
-//            System.out.println(line + sb.toString());
-//        }
-//        reader.close();
-//    }
     
     public void addCustomAvailabilityForLocation(Set<String> resultSet, String curLoc, String homeLoc, String lib) throws Exception
     {    
