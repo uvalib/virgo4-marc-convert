@@ -1,7 +1,8 @@
 #
 # build the target application
 #
-FROM openjdk:8 as builder
+
+FROM public.ecr.aws/docker/library/openjdk:8-jdk as builder
 RUN apt-get -y update && apt-get -y upgrade && apt-get -y install ant
 WORKDIR /build
 COPY build.xml ./
@@ -13,7 +14,7 @@ RUN ant
 #
 # build the target container
 #
-FROM openjdk:8
+FROM public.ecr.aws/docker/library/openjdk:8-jre
 
 # update packages
 RUN apt-get -y update && apt-get -y upgrade
@@ -48,8 +49,8 @@ COPY --from=builder /build/dist $APP_HOME/dist
 RUN chown -R webservice:webservice /home/webservice/.profile $APP_HOME && chmod 755 /home/webservice/.profile $APP_HOME/scripts/entry.sh
 
 # Add the build tag
-#ARG BUILD_TAG
-#RUN test -n "$BUILD_TAG" && touch $APP_HOME/buildtag.build-$BUILD_TAG || touch $APP_HOME/buildtag.build-0
+ARG BUILD_TAG
+RUN test -n "$BUILD_TAG" && touch $APP_HOME/buildtag.build-$BUILD_TAG || touch $APP_HOME/buildtag.build-0
 
 # Specify the user
 USER webservice
