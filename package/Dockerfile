@@ -14,7 +14,7 @@ RUN ant
 #
 # build the target container
 #
-FROM public.ecr.aws/docker/library/openjdk:8-jre
+FROM public.ecr.aws/docker/library/openjdk:8
 
 # update packages
 RUN apt-get -y update && apt-get -y upgrade
