@@ -183,8 +183,8 @@ public class JSONCustomLocationMixin extends SolrIndexerMixin
             Subfield currentLocation = df.getSubfield('k');
             Subfield homeLocation = df.getSubfield('l');
             Subfield shadowed = df.getSubfield('3');
-            if ((currentLocation != null && locationShadowedMap.get(currentLocation.getData()).equals("HIDDEN")) || 
-                    (homeLocation != null && locationShadowedMap.get(homeLocation.getData()).equals("HIDDEN")) ||
+            if ((currentLocation != null && "HIDDEN".equals(locationShadowedMap.get(currentLocation.getData()))) || 
+                    (homeLocation != null && "HIDDEN".equals(locationShadowedMap.get(homeLocation.getData()))) ||
                     (shadowed != null && shadowed.getData().length() > 0))
             { 
                 iter.remove();
@@ -948,14 +948,14 @@ public class JSONCustomLocationMixin extends SolrIndexerMixin
             String homeLoc = (homeLocF != null ? homeLocF.getData() : null);
             boolean shadow = (shadowF != null ? shadowF.getData().length() > 0 : false);
             String mappedHomeVis = locationShadowedMap.get(homeLoc);
-            if (shadow || mappedHomeVis.equals("HIDDEN"))
+            if (shadow || (mappedHomeVis != null && mappedHomeVis.equals("HIDDEN")))
             {
                 continue;
             }
             if (curLoc != null)
             {
                 String mappedCurVis = locationShadowedMap.get(curLoc);
-                if (mappedCurVis.equals("HIDDEN")) continue; // this copy of the item is Hidden, go no further
+                if (mappedCurVis != null && mappedCurVis.equals("HIDDEN")) continue; // this copy of the item is Hidden, go no further
             }
             resultSet.add(mappedLib);
         }
@@ -985,7 +985,7 @@ public class JSONCustomLocationMixin extends SolrIndexerMixin
             String mappedHomeLoc = locOverrideMap.mapSingle(homeLoc);
             if (mappedHomeLoc == null) mappedHomeLoc = mappedHomeLocName;
             
-            if (!shadow && mappedHomeVis.equals("VISIBLE") && mappedHomeLoc == null)
+            if (!shadow && (mappedHomeVis != null && mappedHomeVis.equals("VISIBLE")) && mappedHomeLoc == null)
             {
                 String combinedLocMapped = locationNameMap.get(homeLoc + "__" + lib);
                 if (combinedLocMapped != null) mappedHomeLoc = combinedLocMapped;
@@ -997,7 +997,7 @@ public class JSONCustomLocationMixin extends SolrIndexerMixin
                 String mappedCurLocName = locationNameMap.get(curLoc);
                 if (mappedCurLoc == null) mappedCurLoc = mappedCurLocName;
                 String mappedCurVis = locationShadowedMap.get(curLoc);
-                if (shadow || mappedCurVis.equals("HIDDEN")) continue; // this copy of the item is Hidden, go no further
+                if (shadow || (mappedCurVis != null && mappedCurVis.equals("HIDDEN"))) continue; // this copy of the item is Hidden, go no further
                 if (mappedCurLoc != null && mappedCurLoc.length() > 0)
                 {
                     if (mappedCurLoc.contains("$m") && mappedLib != null)
@@ -1024,7 +1024,7 @@ public class JSONCustomLocationMixin extends SolrIndexerMixin
                     continue; // Used
                 }
             }
-            if (mappedHomeVis.equals("HIDDEN")) continue; // this copy of the item is Hidden, go no further
+            if (mappedHomeVis != null && mappedHomeVis.equals("HIDDEN")) continue; // this copy of the item is Hidden, go no further
             if (mappedHomeLoc != null && mappedHomeLoc.contains("$"))
             {
                 if (mappedLib != null) mappedHomeLoc = mappedHomeLoc.replaceAll("[$]m", mappedLib);
@@ -1056,7 +1056,7 @@ public class JSONCustomLocationMixin extends SolrIndexerMixin
             boolean shadow = (shadowF != null ? shadowF.getData().length() > 0 : false);
             String mappedHomeVis = locationShadowedMap.get(homeLoc);
             String mappedHomeLoc = locationNameMap.get(homeLoc);
-            if (!shadow && mappedHomeVis.equals("VISIBLE") && mappedHomeLoc == null)
+            if (!shadow && (mappedHomeVis != null && mappedHomeVis.equals("VISIBLE")) && mappedHomeLoc == null)
             {
                 String combinedLocMapped = locationNameMap.get(homeLoc + "__" + lib);
                 if (combinedLocMapped != null) mappedHomeLoc = combinedLocMapped;
@@ -1066,7 +1066,7 @@ public class JSONCustomLocationMixin extends SolrIndexerMixin
             {
                 String mappedCurLoc = locationNameMap.get(curLoc);
                 String mappedCurVis = locationShadowedMap.get(curLoc);
-                if (shadow || mappedCurVis.equals("HIDDEN")) continue; // this copy of the item is Hidden, go no further
+                if (shadow || (mappedCurVis != null && mappedCurVis.equals("HIDDEN"))) continue; // this copy of the item is Hidden, go no further
                 if (mappedCurLoc != null)
                 {
                     if (mappedCurLoc.contains("$m") && mappedLib != null)
@@ -1081,7 +1081,7 @@ public class JSONCustomLocationMixin extends SolrIndexerMixin
                     continue; // Used
                 }
             }
-            if (mappedHomeVis.equals("HIDDEN")) continue; // this copy of the item is Hidden, go no further
+            if (mappedHomeVis != null && mappedHomeVis.equals("HIDDEN")) continue; // this copy of the item is Hidden, go no further
 //            if (mappedHomeLoc != null && mappedHomeLoc.contains("$"))
 //            {
 //                if (mappedLib != null) mappedHomeLoc = mappedHomeLoc.replaceAll("[$]m", mappedLib);
@@ -1112,11 +1112,13 @@ public class JSONCustomLocationMixin extends SolrIndexerMixin
             String lib = (libF != null ? libF.getData() : null);
             boolean shadow = (shadowF != null ? shadowF.getData().length() > 0 : false);
             String libCirculating = libraryCirculatingMap.get(lib);
+            if (libCirculating == null) libCirculating = "false";
             if (curLoc != null)
             {
                 String curLocCirculating = locationCirculatingMap.get(curLoc);
+                if (curLocCirculating == null) curLocCirculating = "false";
                 String mappedCurVis = locationShadowedMap.get(curLoc);
-                if (shadow || mappedCurVis.equals("HIDDEN")) continue; // this copy of the item is Hidden, go no further
+                if (shadow || (mappedCurVis != null && mappedCurVis.equals("HIDDEN"))) continue; // this copy of the item is Hidden, go no further
                 if (curLocCirculating != null)
                 {
                     if (libCirculating.equals("true") && curLocCirculating.equals("true"))
@@ -1125,7 +1127,7 @@ public class JSONCustomLocationMixin extends SolrIndexerMixin
                 }
             }
             String mappedHomeVis = locationShadowedMap.get(homeLoc);
-            if (mappedHomeVis.equals("HIDDEN")) continue; // this copy of the item is Hidden, go no further
+            if (mappedHomeVis != null && mappedHomeVis.equals("HIDDEN")) continue; // this copy of the item is Hidden, go no further
 //            if (mappedHomeLoc != null && mappedHomeLoc.contains("$"))
 //            {
 //                if (mappedLib != null) mappedHomeLoc = mappedHomeLoc.replaceAll("[$]m", mappedLib);
@@ -1133,6 +1135,7 @@ public class JSONCustomLocationMixin extends SolrIndexerMixin
 //
 //            }
             String homeLocCirculating = locationCirculatingMap.get(homeLoc);
+            if (homeLocCirculating == null) homeLocCirculating = "false";
             if (libCirculating.equals("true") && homeLocCirculating.equals("true"))
                 circulating = true;   
         }
@@ -1193,8 +1196,8 @@ public class JSONCustomLocationMixin extends SolrIndexerMixin
                 return; // Used
             }
         }
-        if (mappedHomeVis.equals("HIDDEN")) return; // this copy of the item is Hidden, go no further
-        if (mappedLibAvailability.equals("Request"))
+        if (mappedHomeVis != null && mappedHomeVis.equals("HIDDEN")) return; // this copy of the item is Hidden, go no further
+        if (mappedLibAvailability != null && mappedLibAvailability.equals("Request"))
         {
             resultSet.add(mappedLibAvailability);
             return;
@@ -1241,12 +1244,12 @@ public class JSONCustomLocationMixin extends SolrIndexerMixin
             else if (curLoc == null)
             {
                 String mappedHomeLoc = locationShadowedMap.get(homeLoc);
-                if (mappedHomeLoc.equals("VISIBLE")) visible = true;
+                if (mappedHomeLoc != null && mappedHomeLoc.equals("VISIBLE")) visible = true;
             }
             else if (curLoc != null && curLoc.equals("RSRVSHADOW"))
             {
                 String mappedHomeLoc = locationShadowedMap.get(homeLoc);
-                if (mappedHomeLoc.equals("VISIBLE"))
+                if (mappedHomeLoc != null && mappedHomeLoc.equals("VISIBLE"))
                 {
                     visible = true;
                 }
@@ -1255,7 +1258,7 @@ public class JSONCustomLocationMixin extends SolrIndexerMixin
             {
                 String mappedHomeLoc = locationShadowedMap.get(homeLoc);
                 String mappedCurLoc = locationShadowedMap.get(curLoc);
-                if (mappedHomeLoc.equals("VISIBLE") && mappedCurLoc.equals("VISIBLE"))
+                if ((mappedHomeLoc != null && mappedHomeLoc.equals("VISIBLE")) && (mappedCurLoc != null && mappedCurLoc.equals("VISIBLE")))
                 {
                     visible = true;
                 }
