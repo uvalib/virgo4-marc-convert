@@ -1341,14 +1341,16 @@ public class JSONCustomLocationMixin extends SolrIndexerMixin
                 // look ahead for other 863's to combine                
                 String linktag = df.getSubfield('8') != null ? df.getSubfield('8').getData() : null;
                 int j = i+1;
+                String nbreaktag = df.getSubfield('w') != null ? df.getSubfield('w').getData() : null;
                 for (; j < fields.size(); j++)
                 {
                     VariableField nvf = fields.get(j);
                     if (!(nvf instanceof DataField))  break;
                     DataField ndf = (DataField)nvf;
                     String nlinktag = ndf.getSubfield('8') != null ? ndf.getSubfield('8').getData() : null;
-                    if (linktag == null || nlinktag == null || !getLinkPrefix(linktag).equals(getLinkPrefix(nlinktag))) 
-                        break;                   
+                    if (linktag == null || nlinktag == null || !getLinkPrefix(linktag).equals(getLinkPrefix(nlinktag)) || nbreaktag != null) 
+                        break; 
+                    nbreaktag = ndf.getSubfield('w') != null ? ndf.getSubfield('w').getData() : null;
                 }
                 DataField labelField = null;
                 if (linktag != null) labelField = getLabelField(record, getLinkPrefix(linktag));
