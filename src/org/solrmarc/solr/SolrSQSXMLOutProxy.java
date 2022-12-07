@@ -59,6 +59,11 @@ public class SolrSQSXMLOutProxy extends SolrProxy
                 .addMessageAttributesEntry("id", new MessageAttributeValue().withDataType("String").withStringValue(id))
                 .addMessageAttributesEntry("source", new MessageAttributeValue().withDataType("String").withStringValue("solrmarc"))
                 .addMessageAttributesEntry("type", new MessageAttributeValue().withDataType("String").withStringValue("application/xml"));
+
+        // check for the "ignore-cache" attribute and pass it on if present
+        if ( inputDoc.getFieldValue("ignore-cache") != null ) {
+            message.addMessageAttributesEntry( "ignore-cache", new MessageAttributeValue().withDataType("String").withStringValue("true"));
+        }
         aws_sqs.getSQS().sendMessage(message);
         aws_sqs.remove(id);
         return(1);
