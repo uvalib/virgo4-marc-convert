@@ -1,11 +1,10 @@
-package org.solrmarc.marc;
+package org.solrmarc.driver;
 
 import static org.junit.Assert.*;
 
 import org.marc4j.MarcError;
 import org.marc4j.marc.*;
 
-import java.io.*;
 import java.util.*;
 
 /**

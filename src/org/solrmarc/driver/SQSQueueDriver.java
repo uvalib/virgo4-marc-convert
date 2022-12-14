@@ -10,6 +10,7 @@ import java.util.Enumeration;
 import java.util.List;
 import java.util.Properties;
 import org.apache.log4j.Logger;
+import org.marc4j.MarcReader;
 import org.marc4j.MarcReaderConfig;
 import org.solrmarc.index.indexer.IndexerSpecException;
 import org.solrmarc.index.indexer.ValueIndexerFactory;
@@ -17,7 +18,6 @@ import org.solrmarc.marc.MarcSQSReader;
 import org.solrmarc.marc.SolrMarcMarcReaderFactory;
 import org.solrmarc.solr.DevNullProxy;
 import org.solrmarc.solr.SolrCoreLoader;
-import org.solrmarc.solr.SolrProxy;
 import org.solrmarc.solr.SolrRuntimeException;
 import org.solrmarc.solr.SolrSQSWrappedProxy;
 import org.solrmarc.solr.SolrSQSXMLOutProxy;
@@ -48,7 +48,7 @@ public class SQSQueueDriver extends IndexDriver
     private boolean reconfigurable = false;
     private Properties indexSpecMap = null; 
     private String indexSpecName = null;
-    
+
     /**
      * The main entry point of the SolrMarc indexing process. Typically called by the Boot class.
      *
@@ -72,6 +72,31 @@ public class SQSQueueDriver extends IndexDriver
         logger = Logger.getLogger(SQSQueueDriver.class);
     }
 
+    public void initializeForJunitTest(String[] args)
+    {
+        processArgs(args, true);
+        String[] awsLibDirStrs = {"lib_aws"};
+        Boot.extendClasspathWithLocalJarDirs(homeDirStrs, awsLibDirStrs);
+
+        indexerFactory = ValueIndexerFactory.initialize(homeDirStrs);
+        initializeFromOptions();
+
+        String inputQueueName = getSqsParm(options, "sqs-in", VIRGO4_MARC_CONVERT_IN_QUEUE);
+        String s3BucketName = getSqsParm(options, "s3", VIRGO4_SQS_MESSAGE_BUCKET);
+        logger.info("Opening input queue: "+ inputQueueName + ((s3BucketName != null) ? " (with S3 bucket: "+ s3BucketName + " )" : ""));
+        this.configureReader(inputQueueName, s3BucketName);
+    }
+
+    public Indexer getIndexerForJunitTest()
+    {
+        return indexer;
+    }
+
+    public MarcReader getReaderForJunitTest()
+    {
+        return reader;
+    }
+
     /**
      *  Creates a MarcReader, a collection of AbstractValueIndexer objects, and a SolrProxy object 
      *  based on the values in the command-line arguments.  It creates a Indexer object
@@ -92,7 +117,7 @@ public class SQSQueueDriver extends IndexDriver
         String s3BucketName = getSqsParm(options, "s3", VIRGO4_SQS_MESSAGE_BUCKET);
         logger.info("Opening input queue: "+ inputQueueName + ((s3BucketName != null) ? " (with S3 bucket: "+ s3BucketName + " )" : ""));
         this.configureReader(inputQueueName, s3BucketName);
-        
+
         this.processInput();
     }
 
@@ -109,7 +134,7 @@ public class SQSQueueDriver extends IndexDriver
             System.setProperty("solrmarc.indexer.test.fire.method", "true");
         }
     }
-    
+
     private void initializeFromOptions()
     {
         String[] inputSource = new String[1];
@@ -212,6 +237,7 @@ public class SQSQueueDriver extends IndexDriver
             indexers = indexerFactory.createValueIndexers(specFiles);
             indexer.indexers.clear();
             indexer.indexers.addAll(indexers);
+
             indexSpecName = specSelector;
         }
         catch (IllegalAccessException e)
@@ -230,7 +256,7 @@ public class SQSQueueDriver extends IndexDriver
             e.printStackTrace();
         }
     }
-    
+
     private String getSqsParm(OptionSet options, String clOptName, String propertyOrEnvName)
     {
         return (options.has(clOptName) ? options.valueOf(clOptName).toString() : 
