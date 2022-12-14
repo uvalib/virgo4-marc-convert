@@ -21,7 +21,7 @@ import com.amazonaws.util.Base64;
 
 public class MarcSQSReader implements MarcReader
 {
-
+    
     private String queueUrl = null;
     private String queueName; // = "virgo4-ingest-sirsi-inbound-staging";
    // private String s3BucketName; // = "virgo4-ingest-staging-messages";
@@ -35,19 +35,19 @@ public class MarcSQSReader implements MarcReader
     private MarcReaderConfig config = null;
     private SQSQueueDriver driver = null;
     private int messagesSinceLastSleep = 0;
-
+    
     private final static Logger logger = Logger.getLogger(MarcSQSReader.class);
-
+    
     public MarcSQSReader(MarcReaderConfig config, String queueName)
     {
         init(config, queueName, null);
     }
-
+    
     public MarcSQSReader(MarcReaderConfig config, String queueName, String s3BucketName)
     {
         init(config, queueName, s3BucketName);
     }
-
+    
     public MarcSQSReader(MarcReaderConfig config, String queueName, String s3BucketName, boolean createQueueIfNotExists)
     {
         this.createQueueIfNotExists = createQueueIfNotExists;
@@ -67,7 +67,7 @@ public class MarcSQSReader implements MarcReader
     {
         this.queueName = queueName;
         this.config = config;
-
+        
         aws_sqs = AwsSqsSingleton.getInstance(s3BucketName);
         queueUrl = aws_sqs.getQueueUrlForName(this.queueName, createQueueIfNotExists);
         receiveMessageRequest = new ReceiveMessageRequest(queueUrl).withMaxNumberOfMessages(10).withMessageAttributeNames("All").withWaitTimeSeconds(20);
@@ -136,8 +136,8 @@ public class MarcSQSReader implements MarcReader
             catch(com.amazonaws.SdkClientException cas)
             {
                 logger.error("Read queue " + this.queueName + " Failed trying to read SQS message. ");
-                curMessages = null;
-                curMessageIndex = 0;
+            	curMessages = null;
+            	curMessageIndex = 0;
             }
         }
         if (Thread.currentThread().isInterrupted())
@@ -146,7 +146,7 @@ public class MarcSQSReader implements MarcReader
             curMessageIndex = 0;
         }
     }
-
+    
     @Override
     public Record next()
     {
@@ -202,11 +202,11 @@ public class MarcSQSReader implements MarcReader
                 MarcReader binreader = MarcReaderFactory.makeReader(config, new ByteArrayInputStream(expandedMessageBodyBytes));
                 if (binreader instanceof MarcScriptedRecordEditReader)
                 {
-                    logger.debug("reader using script "+ config.getMarcRemapFilename());
+                	logger.debug("reader using script "+ config.getMarcRemapFilename());
                 }
                 else
                 {
-                    logger.debug("reader NOT using script ");
+                	logger.debug("reader NOT using script ");
                 }
                 //         new MarcPermissiveStreamReader(new ByteArrayInputStream(expandedMessageBodyBytes), true, true); 
                 try { 
@@ -236,34 +236,19 @@ public class MarcSQSReader implements MarcReader
                 throw new MarcException("Unknown message type "+ messageType);
             }
             logger.trace(rec.toString());
-
+            
             String id = message.getMessageAttributes().get("id").getStringValue();
-            String ignoreCache = null;
-            if (message.getMessageAttributes().get("ignore-cache") != null)
-            {
-                ignoreCache = message.getMessageAttributes().get("ignore-cache").getStringValue();
-            }
-
             String indexSpecName = message.getMessageAttributes().get("source") != null ? message.getMessageAttributes().get("source").getStringValue() : null;
-
+            
             if (indexSpecName != null && driver != null)  
             {
                 driver.reconfigureIndexer(indexSpecName);
             }
-
             final String messageReceiptHandle = message.getReceiptHandle();
-            RecordPlus recplus = new RecordPlus(rec);
-            recplus.addExtraData("message-attribute-id", id);
-            if (ignoreCache != null)
-            {
-                recplus.addExtraData("message-attribute-ignore-cache", ignoreCache);
-            }
-            recplus.addExtraData("message-receipt-handle", messageReceiptHandle);
-            recplus.addExtraData("message-attribute-source", indexSpecName);
             //  Add message Receipt Handle to a map for later deletion
-//            aws_sqs.add(queueUrl, id, messageReceiptHandle);
-
-            return(recplus);
+            aws_sqs.add(queueUrl, id, messageReceiptHandle);
+            
+            return(rec);
         } 
         catch (NullPointerException npe)
         {
@@ -276,7 +261,7 @@ public class MarcSQSReader implements MarcReader
             throw new MarcException("I/O error decoding record -- this shouldn't happen");
         }
     }
-
+        
     public static void main(String[] args)
     {
         //    -sqs-in "virgo4-ingest-sirsi-marc-ingest-staging"
@@ -284,7 +269,7 @@ public class MarcSQSReader implements MarcReader
         String queueName= "virgo4-ingest-sirsi-marc-ingest-staging";
         String s3BucketName = "virgo4-ingest-staging-messages";
         MarcReaderConfig config = new MarcReaderConfig().setCombineConsecutiveRecordsFields("852|853|863|866|867|868|999").setToUtf8(true).setPermissiveReader(true);
-
+        
         MarcSQSReader reader = new MarcSQSReader(config, queueName, s3BucketName);
         long start = System.currentTimeMillis();
         for (int i = 0; i < 1000; )
@@ -294,7 +279,7 @@ public class MarcSQSReader implements MarcReader
         }
         long end = System.currentTimeMillis();
         System.out.println("Total time (fetch only)= "+ ((1.0 * (end - start)) / 1000.0) + " seconds");
-
+        
         start = System.currentTimeMillis();
         for (int i = 0; i < 1000; i++)
         {
