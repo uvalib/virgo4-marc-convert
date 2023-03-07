@@ -11,6 +11,8 @@ import org.marc4j.marc.Subfield;
 import org.marc4j.marc.VariableField;
 import org.solrmarc.index.SolrIndexer;
 import org.solrmarc.index.SolrIndexerMixin;
+import org.solrmarc.index.indexer.ValueIndexerFactory;
+import org.solrmarc.index.mapping.AbstractMultiValueMapping;
 import org.solrmarc.tools.Utils;
 
 public class UrlMixin extends SolrIndexerMixin
@@ -257,6 +259,8 @@ public class UrlMixin extends SolrIndexerMixin
                 }
                 else if (firstIndicatorValid(dField) && dField.getIndicator2() == '1' && !isSupplementalUrl(dField))
                 {
+                    String subr = dField.getSubfieldsAsString("e");
+                    if (subr.contains("UVA TrackSys")) continue;
                     String label = (dField.getSubfield('3') != null) ? dField.getSubfield('3').getData() : defaultLabel;
                     if (dField.getSubfield('u') != null) 
                     {
@@ -318,7 +322,40 @@ public class UrlMixin extends SolrIndexerMixin
         }
         return(resultSet);
     }
+    
+    private Set<String> appendToResult(Set<String> result, String valueToAppend)
+    {
+        Set<String> newResult = new LinkedHashSet<String>();
+        for (String str : result)
+        {
+            newResult.add(str + valueToAppend);
+        }
+        return newResult;        
+    }
 
+
+    public Set<String> getLabelledURLnewPlusCount(final Record record, String defaultLabel, String translationMapName) throws Exception
+    {
+        Set<String> result = getLabelledURLnew(record, defaultLabel);
+        AbstractMultiValueMapping transMap = ValueIndexerFactory.instance().createMultiValueMapping(translationMapName);
+        List<VariableField> fields = record.getVariableFields("710");
+        for (VariableField vf : fields)
+        {
+            DataField df = (DataField)vf;
+            String suba = df.getSubfieldsAsString("a");
+            if (suba != null)
+            {
+                String mappedValue= transMap.mapSingle(suba);
+                if (mappedValue != null && mappedValue.length() > 0)
+                {
+                    result = appendToResult(result, " ("+mappedValue+")");
+                    break;
+                }
+            }
+        }
+        return(result);
+    }
+    
     private boolean firstIndicatorValid(DataField dField)
     {
         if (dField.getIndicator1() == '4' || dField.getIndicator1() == '1') return(true);
@@ -352,6 +389,8 @@ public class UrlMixin extends SolrIndexerMixin
 //                }
                 if (firstIndicatorValid(dField) && dField.getIndicator2() == '1' && isSupplementalUrl(dField))
                 {
+                    String subr = dField.getSubfieldsAsString("e");
+                    if (subr.contains("UVA TrackSys")) continue;
                     String label = (dField.getSubfield('3') != null) ? dField.getSubfield('3').getData() : "";
                     if (dField.getSubfield('u') != null) 
                     {
@@ -410,6 +449,53 @@ public class UrlMixin extends SolrIndexerMixin
         if (resultSet.size() == 0 && backupResultSet.size() != 0)
         {
             return(backupResultSet);
+        }
+        return(resultSet);
+    }
+    
+    public Set<String> getLabelledRightsURLnew(final Record record, String defaultLabel) throws Exception
+    {
+        Set<String> resultSet = new LinkedHashSet<String>();
+        Set<String> backupResultSet = new LinkedHashSet<String>();
+        List<?> urlFields = record.getVariableFields("856");
+        for (Object field : urlFields)
+        {
+            if (field instanceof DataField)
+            {
+                DataField dField = (DataField)field;
+                if (firstIndicatorValid(dField) && dField.getIndicator2() == '1')
+                {
+                    String subr = dField.getSubfieldsAsString("e");
+                    if (!subr.contains("UVA TrackSys")) continue;
+                    List<String> labelList = Utils.getSubfieldStrings(dField, 't');
+                    String label = defaultLabel;
+                    if (labelList != null && labelList.size() > 0)
+                    {
+                        label = String.join("\n", labelList);
+                    }
+                    if (dField.getSubfield('r') != null) 
+                    {
+                        String result = dField.getSubfield('r').getData() + "||" + label;
+                        resultSet.add(result);
+                    }
+                }
+                else if (firstIndicatorValid(dField) && dField.getIndicator2() == '2')
+                {
+                    String subr = dField.getSubfieldsAsString("e");
+                    if (!subr.contains("UVA TrackSys")) continue;
+                    List<String> labelList = Utils.getSubfieldStrings(dField, 't');
+                    String label = defaultLabel;
+                    if (labelList != null && labelList.size() > 0)
+                    {
+                        label = String.join("\n", labelList);
+                    }
+                    if (dField.getSubfield('r') != null) 
+                    {
+                        String result = dField.getSubfield('r').getData() + "||" + label;
+                        resultSet.add(result);
+                    }
+                }
+            }
         }
         return(resultSet);
     }

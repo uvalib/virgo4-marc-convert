@@ -265,7 +265,7 @@ public class JSONCustomLocationMixin extends SolrIndexerMixin
             }
             String firstNum = values.iterator().next();
             String parts[] = firstNum.split(":", 2);
-            if ((parts[0].equals("LC") || parts[0].equals("")) && CallNumUtils.isValidLC(parts[1]) && values.size() > maxLCEntries)
+            if ((parts[0].equals("LC") || parts[0].equals("")) && ((new LCCallNumber(parts[1]).isValid())) && values.size() > maxLCEntries)
             {
                 maxLCEntries = values.size();
                 // maxLCEntriesKey = key;
@@ -327,7 +327,7 @@ public class JSONCustomLocationMixin extends SolrIndexerMixin
         for (String field : fieldList)
         {
             String fieldParts[] = field.split(":", 2);
-            if (fieldParts[0].equals("LC") || (fieldParts[0].equals("") && CallNumUtils.isValidLC(field)))
+            if (fieldParts[0].equals("LC") || (fieldParts[0].equals("") && ((new LCCallNumber(field).isValid()))))
             {
                 hasLCNumber = true;
                 break;
@@ -339,7 +339,7 @@ public class JSONCustomLocationMixin extends SolrIndexerMixin
             List<String> fList2 = get050Entries(record);
             for (String field : fList2)
             {
-                if (CallNumUtils.isValidLC(field))
+                if (((new LCCallNumber(field).isValid())))
                 {
                     fieldList.add("LC:" + field);
                 }
@@ -365,7 +365,7 @@ public class JSONCustomLocationMixin extends SolrIndexerMixin
         }
         for (String field : fList1)
         {
-            if (CallNumUtils.isValidLC(field))
+            if (((new LCCallNumber(field).isValid())))
             {
                 fieldList.add("LC:" + field);
             }
@@ -376,7 +376,7 @@ public class JSONCustomLocationMixin extends SolrIndexerMixin
             {
                 String fieldParts[] = field.split(":", 2);
                 // dont add LC numbers that aren't valid according to the CallNumUtil routine
-                if ((fieldParts[0].equals("LC") || fieldParts[0].equals("")) && CallNumUtils.isValidLC(fieldParts[1]))
+                if ((fieldParts[0].equals("LC") || fieldParts[0].equals("")) && ((new LCCallNumber(fieldParts[1]).isValid())))
                     fieldList.add(field);
             }
         }
@@ -557,7 +557,7 @@ public class JSONCustomLocationMixin extends SolrIndexerMixin
         String result = getBestSingleCallNumber(record);
         if (result == null) return (result);
         String resultParts[] = result.split(":", 2);
-        if (sortableFlag && (resultParts[0].equals("LC") || (resultParts[0].equals("") && CallNumUtils.isValidLC(resultParts[1])))) 
+        if (sortableFlag && (resultParts[0].equals("LC") || (resultParts[0].equals("") && ((new LCCallNumber(resultParts[1]).isValid()))))) 
         {
             result = getLCShelfkey(resultParts[1], record.getControlNumber());
         }
@@ -585,7 +585,7 @@ public class JSONCustomLocationMixin extends SolrIndexerMixin
         String result = null;
         if (callnum == null) return (null);
         String resultParts[] = callnum.split(":", 2);
-        if ((resultParts[0].equals("LC") || resultParts[0].equals("")) && CallNumUtils.isValidLC(resultParts[1]))
+        if ((resultParts[0].equals("LC") || resultParts[0].equals("")) && ((new LCCallNumber(resultParts[1]).isValid())))
         {
             result = getLCShelfkey(resultParts[1], record.getControlNumber());
         }
@@ -606,7 +606,7 @@ public class JSONCustomLocationMixin extends SolrIndexerMixin
         String result = null;
         if (callnum == null) return (null);
         String resultParts[] = callnum.split(":", 2);
-        if ((resultParts[0].equals("LC") || resultParts[0].equals("")) && CallNumUtils.isValidLC(resultParts[1]))
+        if ((resultParts[0].equals("LC") || resultParts[0].equals("")) && ((new LCCallNumber(resultParts[1]).isValid())))
         {
             result = getLCShelfkey(resultParts[1], record.getControlNumber());
         }
@@ -668,7 +668,7 @@ public class JSONCustomLocationMixin extends SolrIndexerMixin
         if (callnum == null) return (null);
         String result = null;
         String resultParts[] = callnum.split(":", 2);
-        if ((resultParts[0].equals("LC") || resultParts[0].equals("")) && CallNumUtils.isValidLC(resultParts[1]))
+        if ((resultParts[0].equals("LC") || resultParts[0].equals("")) && ((new LCCallNumber(resultParts[1]).isValid())))
         {
             result = resultParts[1];
         }
@@ -685,7 +685,7 @@ public class JSONCustomLocationMixin extends SolrIndexerMixin
         }
         String result = null;
         String resultParts[] = callnum.split(":", 2);
-        if ((resultParts[0].equals("LC") || resultParts[0].equals("")) && CallNumUtils.isValidLC(resultParts[1]))
+        if ((resultParts[0].equals("LC") || resultParts[0].equals("")) && ((new LCCallNumber(resultParts[1]).isValid())))
         {
             LCCallNumber callNum = new LCCallNumber(resultParts[1]);
             result = callNum.getPaddedShelfKey();
