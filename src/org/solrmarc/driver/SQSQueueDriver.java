@@ -12,6 +12,7 @@ import java.util.Properties;
 import org.apache.log4j.Logger;
 import org.marc4j.MarcReader;
 import org.marc4j.MarcReaderConfig;
+import org.marc4j.MarcReaderFactory;
 import org.solrmarc.index.indexer.IndexerSpecException;
 import org.solrmarc.index.indexer.ValueIndexerFactory;
 import org.solrmarc.marc.MarcSQSReader;
@@ -44,10 +45,16 @@ public class SQSQueueDriver extends IndexDriver
     public final static String VIRGO4_MARC_CONVERT_OUT_QUEUE = "VIRGO4_MARC_CONVERT_OUT_QUEUE";
     public final static String VIRGO4_MARC_CONVERT_DELETE_QUEUE = "VIRGO4_MARC_CONVERT_DELETE_QUEUE";
     public final static String VIRGO4_SQS_MESSAGE_BUCKET =     "VIRGO4_SQS_MESSAGE_BUCKET";
+    public final static String VIRGO4_TRACKSYS_ENRICH_OEMBED_ROOT = "VIRGO4_TRACKSYS_ENRICH_OEMBED_ROOT";
+    public final static String VIRGO4_TRACKSYS_ENRICH_OCR_ROOT = "VIRGO4_TRACKSYS_ENRICH_OCR_ROOT";
+    public final static String VIRGO4_TRACKSYS_ENRICH_S3_BUCKET = "VIRGO4_TRACKSYS_ENRICH_S3_BUCKET";
     public final static int VIRGO4_MARC_CONVERT_QUEUE_POLL_TIMEOUT = 20; // in seconds
     private boolean reconfigurable = false;
     private Properties indexSpecMap = null; 
     private String indexSpecName = null;
+    public static String DlMixin_Oembed_Root = "";
+    public static String DlMixin_OCR_Root = "";
+    public static String DlMixin_S3_BucketName = "";
 
     /**
      * The main entry point of the SolrMarc indexing process. Typically called by the Boot class.
@@ -115,8 +122,29 @@ public class SQSQueueDriver extends IndexDriver
 
         String inputQueueName = getSqsParm(options, "sqs-in", VIRGO4_MARC_CONVERT_IN_QUEUE);
         String s3BucketName = getSqsParm(options, "s3", VIRGO4_SQS_MESSAGE_BUCKET);
-        logger.info("Opening input queue: "+ inputQueueName + ((s3BucketName != null) ? " (with S3 bucket: "+ s3BucketName + " )" : ""));
-        this.configureReader(inputQueueName, s3BucketName);
+        if (inputQueueName != null && inputQueueName.length() > 0) 
+        {
+            logger.info("Opening input queue: "+ inputQueueName + ((s3BucketName != null) ? " (with S3 bucket: "+ s3BucketName + " )" : ""));
+            this.configureReader(inputQueueName, s3BucketName);
+        }
+        else
+        {
+            List<String> inputFiles = options.valuesOf(files);
+            logger.info("Opening input files: " + Arrays.toString(inputFiles.toArray()));
+            try
+            {
+                reader = MarcReaderFactory.makeReader((MarcReaderConfig)readerConfig, ValueIndexerFactory.instance().getHomeDirs(), inputFiles);
+            }
+            catch (IOException e)
+            {
+                throw new IllegalArgumentException(e.getMessage(), e);
+            }
+            catch (NoClassDefFoundError ncdfe)
+            {
+                logger.warn("Using SolrMarc with a marc4j version < 2.8 uses deprecated code in SolrMarc");
+                reader = SolrMarcMarcReaderFactory.instance().makeReader(readerProps, ValueIndexerFactory.instance().getHomeDirs(), inputFiles);
+            }
+        }
 
         this.processInput();
     }
@@ -141,6 +169,9 @@ public class SQSQueueDriver extends IndexDriver
         String propertyFileAsURLStr = PropertyUtils.getPropertyFileAbsoluteURL(homeDirStrs, options.valueOf(readOpts), true, inputSource);
         logger.info("marcreader option is "+options.valueOf(readOpts));
         logger.info("propertyFileAsURLStr is "+propertyFileAsURLStr);
+        DlMixin_Oembed_Root =  getSqsParm(options, "tracksys-cache-oembed-root", VIRGO4_TRACKSYS_ENRICH_OEMBED_ROOT);
+        DlMixin_OCR_Root =  getSqsParm(options, "tracksys-cache-ocr-root", VIRGO4_TRACKSYS_ENRICH_OCR_ROOT);
+        DlMixin_S3_BucketName = getSqsParm(options, "tracksys-cache-s3", VIRGO4_TRACKSYS_ENRICH_S3_BUCKET);
         try
         {
             configureReaderProps(propertyFileAsURLStr);
