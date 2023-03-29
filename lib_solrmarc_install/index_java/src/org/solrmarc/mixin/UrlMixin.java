@@ -466,7 +466,7 @@ public class UrlMixin extends SolrIndexerMixin
                 if (firstIndicatorValid(dField) && dField.getIndicator2() == '1')
                 {
                     String subr = dField.getSubfieldsAsString("e");
-                    if (!subr.contains("UVA TrackSys")) continue;
+                    if (subr == null || !subr.contains("UVA TrackSys")) continue;
                     List<String> labelList = Utils.getSubfieldStrings(dField, 't');
                     String label = defaultLabel;
                     if (labelList != null && labelList.size() > 0)
@@ -482,7 +482,7 @@ public class UrlMixin extends SolrIndexerMixin
                 else if (firstIndicatorValid(dField) && dField.getIndicator2() == '2')
                 {
                     String subr = dField.getSubfieldsAsString("e");
-                    if (!subr.contains("UVA TrackSys")) continue;
+                    if (subr == null || !subr.contains("UVA TrackSys")) continue;
                     List<String> labelList = Utils.getSubfieldStrings(dField, 't');
                     String label = defaultLabel;
                     if (labelList != null && labelList.size() > 0)
