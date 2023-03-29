@@ -52,13 +52,13 @@ public class DlMixin extends SolrIndexerMixin
 
     static void initializePublishedMap()
     {
-        logger.info("Initializing PublishedMap");
+//        logger.info("Initializing PublishedMap");
         synchronized (publishedMap)
         {
             long now = java.lang.System.currentTimeMillis();
             if (publishedMap.size() == 0 || now - lastInitializedTimeStamp > ONE_HOUR_IN_MILLISECONDS)
             {
-                logger.info("Actually Initializing PublishedMap");
+                logger.info(publishedMap.size() == 0 ? "Initializing PublishedMap" : "Re-Initializing PublishedMap after 1 hour");
                 lastInitializedTimeStamp = now; 
                 try
                 {
@@ -90,7 +90,7 @@ public class DlMixin extends SolrIndexerMixin
                 }
             }
         }
-        logger.info("PublishedMap size is " + publishedMap.size());
+        logger.info("PublishedMap initialized, size is " + publishedMap.size()+ " items");
     }
 
     private Cache<String, JsonObject> cache = new Cache<String, JsonObject>(64);
@@ -104,6 +104,8 @@ public class DlMixin extends SolrIndexerMixin
             initializePublishedMap();
             lastInitializedTimeStamp = now; 
         }
+        // for debugging
+        publishedMap.putIfAbsent("u399","");
         if (!publishedMap.containsKey(id))
         {
             return (null);
@@ -113,32 +115,32 @@ public class DlMixin extends SolrIndexerMixin
             return decodeNull(cache.get(id));
         }
         final String urlStr = JSON_SERVICE_URL + id;
+        InputStream urlInputStream = null;
+        JsonObject jsonObject = null;
         try
         {
             final URL url = new URL(urlStr);
-            InputStream urlInputStream = url.openStream();
-            try
-            {
-                final JsonObject jsonObject = Json.createReader(urlInputStream).readObject();
-                cache.put(id, jsonObject);
-                return jsonObject;
-            }
-            finally
-            {
-                urlInputStream.close();
-            }
-        }
-        catch (FileNotFoundException ex)
-        {
-            cache.put(id, encodeNull(null));
-            // System.out.println(urlStr + " not found, so " + id + " must not be in the
-            // DL!");
+            urlInputStream = url.openStream();
+            jsonObject = Json.createReader(urlInputStream).readObject();
+            cache.put(id, jsonObject);
         }
         catch (IOException ex)
         {
-            throw new RuntimeException(ex);
+            cache.put(id, encodeNull(null));
+            logger.warn(urlStr + " not found, so " + id + " must not be in the tracksys system");
         }
-        return null;
+        finally
+        {
+            if (urlInputStream != null) 
+            {
+                try { 
+                    urlInputStream.close();
+                }
+                catch (IOException ioe)
+                {}
+            }
+        }
+        return jsonObject;
     }
 
     private JsonObject decodeNull(JsonObject o)
@@ -277,17 +279,18 @@ public class DlMixin extends SolrIndexerMixin
                     code = getContentsOfURL(statusURL, sb);
                     if (code == 200 && sb.toString().equals("READY"))
                     {
+                        logger.info("Status from URL "+statusURLstr+": code = "+code+" Result = "+sb.toString());
                         String downloadURLstr = pdfRoot + "/" + item.getString("pid") + "/download";
                         result.add(downloadURLstr);
                     }
                 }
                 catch (MalformedURLException e1)
                 {
-                    // we will assume any error means a PDF is not available
+                    logger.info("Malformed URL "+statusURLstr+": assuming PDF download is not available");
                 }
                 catch (IOException e)
                 {
-                    // we will assume any error means a PDF is not available
+                    logger.info("Error reading from URL "+statusURLstr+": assuming PDF download is not available");
                 }
             }
         }
@@ -302,7 +305,10 @@ public class DlMixin extends SolrIndexerMixin
         {
             for (JsonValue item : dlSummary.getJsonArray("items"))
             {
-                result.add(((JsonObject) item).getString("rsURI"));
+                if (((JsonObject) item).getString("rsURI") != null)
+                {
+                    result.add(((JsonObject) item).getString("rsURI"));
+                }
             }
         }
         return result;
@@ -316,7 +322,10 @@ public class DlMixin extends SolrIndexerMixin
         {
             for (JsonValue item : dlSummary.getJsonArray("items"))
             {
-                result.add(((JsonObject) item).getString("pid"));
+                if (((JsonObject) item).getString("pid") != null)
+                {
+                    result.add(((JsonObject) item).getString("pid"));
+                }
             }
         }
         return result;
@@ -330,7 +339,10 @@ public class DlMixin extends SolrIndexerMixin
         {
             for (JsonValue item : dlSummary.getJsonArray("items"))
             {
-                result.add(((JsonObject) item).getString("callNumber"));
+                if (((JsonObject) item).getString("callNumber") != null)
+                {
+                    result.add(((JsonObject) item).getString("callNumber"));
+                }
             }
         }
         return result;
@@ -486,7 +498,7 @@ public class DlMixin extends SolrIndexerMixin
 
     private String storeCacheData(String digitalContent, String s3BucketName, String catKey)
     {
-        logger.info("Uploading " + catKey + " to S3 bucket " + s3Bucket + s3BucketName + "...\n");
+        logger.info("Uploading tracksys cache for " + catKey + " to S3 bucket " + s3Bucket + s3BucketName + "...\n");
         String urlStrWrite = s3UrlPrefix + s3BucketName + "/" + catKey;
         final AmazonS3 s3 = AmazonS3ClientBuilder.standard().build();
         try
