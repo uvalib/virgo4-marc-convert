@@ -104,8 +104,6 @@ public class DlMixin extends SolrIndexerMixin
             initializePublishedMap();
             lastInitializedTimeStamp = now; 
         }
-        // for debugging
-        publishedMap.putIfAbsent("u399","");
         if (!publishedMap.containsKey(id))
         {
             return (null);
