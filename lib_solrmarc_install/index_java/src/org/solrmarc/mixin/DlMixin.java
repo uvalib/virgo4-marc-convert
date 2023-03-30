@@ -121,11 +121,17 @@ public class DlMixin extends SolrIndexerMixin
             urlInputStream = url.openStream();
             jsonObject = Json.createReader(urlInputStream).readObject();
             cache.put(id, jsonObject);
+            JsonArray items = jsonObject.getJsonArray("items");
+            int num = items != null ? items.size() : 0;
+            logger.info("Reading JSON info from tracksys about record "+id);
+            logger.info("Record contains "+num+ " items");
+
         }
         catch (IOException ex)
         {
             cache.put(id, encodeNull(null));
             logger.warn(urlStr + " not found, so " + id + " must not be in the tracksys system");
+            logger.warn("IOException", ex);
         }
         finally
         {
