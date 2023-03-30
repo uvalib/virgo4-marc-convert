@@ -17,6 +17,7 @@ import org.solrmarc.index.SolrIndexerMixin;
 import org.solrmarc.index.indexer.IndexerSpecException;
 import org.solrmarc.index.indexer.ValueIndexerFactory;
 import org.solrmarc.tools.PropertyUtils;
+import org.solrmarc.marc.RecordPlus;
 
 public class DlMixin extends SolrIndexerMixin
 {
@@ -27,11 +28,13 @@ public class DlMixin extends SolrIndexerMixin
     private static final String JSON_SERVICE_URL2 = "https://tracksys-api-ws.internal.lib.virginia.edu/api/published/virgo?type=sirsi";
 
     private static final ConcurrentHashMap<String, String> publishedMap = new ConcurrentHashMap<String, String>();
-
+    private static Cache<String, JsonObject> cache = new Cache<String, JsonObject>(256);
+    
     public final static String s3Bucket = "s3://";
     public final static String s3UrlPrefix = "https://s3.us-east-1.amazonaws.com/";
     public static long lastInitializedTimeStamp = 0L;
     public final static long ONE_HOUR_IN_MILLISECONDS = (1000L * 60 * 60 * 1);
+    public final static long ONE_MINUTE_IN_MILLISECONDS = (1000L * 60 * 1);
     // "https://s3.us-east-1.amazonaws.com/digital-content-metadata-cache-staging/u6288359"
 
 
@@ -56,9 +59,10 @@ public class DlMixin extends SolrIndexerMixin
         synchronized (publishedMap)
         {
             long now = java.lang.System.currentTimeMillis();
-            if (publishedMap.size() == 0 || now - lastInitializedTimeStamp > ONE_HOUR_IN_MILLISECONDS)
+            if (publishedMap.size() == 0 || now - lastInitializedTimeStamp > ONE_MINUTE_IN_MILLISECONDS)
             {
-                logger.info(publishedMap.size() == 0 ? "Initializing PublishedMap" : "Re-Initializing PublishedMap after 1 hour");
+                logger.info(publishedMap.size() == 0 ? "Initializing PublishedMap" : 
+                       (lastInitializedTimeStamp == 0L ) ? "Re-Initializing PublishedMap due to message-attribute-ignore-cache found" : "Re-Initializing PublishedMap after 1 minute");
                 lastInitializedTimeStamp = now; 
                 try
                 {
@@ -93,43 +97,63 @@ public class DlMixin extends SolrIndexerMixin
         logger.info("PublishedMap initialized, size is " + publishedMap.size()+ " items");
     }
 
-    private Cache<String, JsonObject> cache = new Cache<String, JsonObject>(64);
+    
 
     private synchronized JsonObject lookupSirsiId(final Record record)
     {
         final String id = record.getControlNumber();
+        
         long now = java.lang.System.currentTimeMillis();
-        if (publishedMap.size() == 0 || now - lastInitializedTimeStamp > ONE_HOUR_IN_MILLISECONDS)
+        if (record instanceof RecordPlus)
+        {
+            if (((RecordPlus)record).hasExtraData("message-attribute-ignore-cache"))
+            {
+                logger.info("Message attribute \"ignore-cache\" found -- reinitializing cache");
+                lastInitializedTimeStamp = 0L;
+            }
+        }
+        if (publishedMap.size() == 0 || now - lastInitializedTimeStamp > ONE_MINUTE_IN_MILLISECONDS)
         {
             initializePublishedMap();
-            lastInitializedTimeStamp = now; 
         }
+        if (record instanceof RecordPlus)
+        {
+            if (((RecordPlus)record).hasExtraData("message-attribute-ignore-cache"))
+            {
+                publishedMap.putIfAbsent(id, "");
+                synchronized (cache) { cache.remove(id); }
+            }
+        }
+
         if (!publishedMap.containsKey(id))
         {
             return (null);
         }
-        if (cache.containsKey(id))
+        JsonObject jsonObject = null;
+        synchronized (cache) 
         {
-            return decodeNull(cache.get(id));
+            if (cache.containsKey(id))
+            {
+                jsonObject = decodeNull(cache.get(id));
+            }
         }
+        if (jsonObject != null) return(jsonObject);
         final String urlStr = JSON_SERVICE_URL + id;
         InputStream urlInputStream = null;
-        JsonObject jsonObject = null;
         try
         {
             final URL url = new URL(urlStr);
             urlInputStream = url.openStream();
             jsonObject = Json.createReader(urlInputStream).readObject();
-            cache.put(id, jsonObject);
-            JsonArray items = jsonObject.getJsonArray("items");
-            int num = items != null ? items.size() : 0;
+            synchronized (cache) { cache.put(id, jsonObject); }
             logger.info("Reading JSON info from tracksys about record "+id);
+            JsonArray items = jsonObject.getJsonArray("items");
+            int num = (items != null) ? items.size() : 0;
             logger.info("Record contains "+num+ " items");
-
         }
         catch (IOException ex)
         {
-            cache.put(id, encodeNull(null));
+            synchronized (cache) { cache.put(id, encodeNull(null)); }
             logger.warn(urlStr + " not found, so " + id + " must not be in the tracksys system");
             logger.warn("IOException", ex);
         }
@@ -602,7 +626,6 @@ public class DlMixin extends SolrIndexerMixin
         return sb.toString();
     }
 
-
     private void handleTemplate(StringBuilder sb, String[] template, String prefixStr, Map<String, String> valueMap)
     {
         for (String templateLine : template)
@@ -615,7 +638,6 @@ public class DlMixin extends SolrIndexerMixin
             }
         }
     }
-
 
     private void handleTemplateLine(StringBuilder sb, String templateRest, Map<String, String> valueMap)
     {
