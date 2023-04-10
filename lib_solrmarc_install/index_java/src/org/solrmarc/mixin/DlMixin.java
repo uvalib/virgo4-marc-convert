@@ -647,7 +647,7 @@ public class DlMixin extends SolrIndexerMixin
         {
             int ifend = templateRest.indexOf(' ');
             String onlyif = templateRest.substring(1, ifend).replaceFirst("^[$][{]", "").replaceFirst("[}]$", "");
-            if (!valueMap.containsKey(onlyif) || valueMap.get(onlyif).length() == 0)
+            if (!valueMap.containsKey(onlyif) || valueMap.get(onlyif) == null || valueMap.get(onlyif).length() == 0)
                 return;
             templateRest = templateRest.substring(ifend);
         }

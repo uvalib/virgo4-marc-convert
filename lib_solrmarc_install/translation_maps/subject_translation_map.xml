@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8" standalone="no"?>
 <!DOCTYPE properties SYSTEM "http://java.sun.com/dtd/properties.dtd">
-<comment>This is easy!</comment>
 <properties>
+<comment>This is easy!</comment>
 <entry key="Accessible Web sites for deaf people">Accessible Web sites for the deaf</entry>
 <entry key="African American bisexual people">African American bisexuals</entry>
 <entry key="African American gay people">African American gays</entry>
@@ -97,7 +97,7 @@
 <entry key="Gay people's writings, Phillipines (English)">Gays' writings, Phillipines (English)</entry>
 <entry key="Gay people's writings, Portuguese">Gays' writings, Portuguese</entry>
 <entry key="Gay people's writings, Puerto Rican">Gays' writings, Puerto Rican</entry>
-<entry key="Gay people's writings, Scottish"">Gays' writings, Scottish</entry>
+<entry key="Gay people's writings, Scottish">Gays' writings, Scottish</entry>
 <entry key="Gay people's writings, South African (English)">Gays' writings, South African (English)</entry>
 <entry key="Gay people's writings, Spanish American">Gays' writings, Spanish American</entry>
 <entry key="Gay people's writings, Spanish">Gays' writings, Spanish</entry>
