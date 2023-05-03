@@ -668,7 +668,7 @@ public class JSONCustomLocationMixin extends SolrIndexerMixin
         if (callnum == null) return (null);
         String result = null;
         String resultParts[] = callnum.split(":", 2);
-        if ((resultParts[0].equals("LC") || resultParts[0].equals("")) && ((new LCCallNumber(resultParts[1]).isValid())))
+        if (resultParts[0].startsWith("LC") || (new LCCallNumber(resultParts[1]).isValid()))
         {
             result = resultParts[1];
         }
