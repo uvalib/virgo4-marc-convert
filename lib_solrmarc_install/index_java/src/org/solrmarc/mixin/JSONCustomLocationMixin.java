@@ -685,7 +685,7 @@ public class JSONCustomLocationMixin extends SolrIndexerMixin
         }
         String result = null;
         String resultParts[] = callnum.split(":", 2);
-        if ((resultParts[0].equals("LC") || resultParts[0].equals("")) && ((new LCCallNumber(resultParts[1]).isValid())))
+        if (resultParts[0].startsWith("LC") || (new LCCallNumber(resultParts[1]).isValid()))
         {
             LCCallNumber callNum = new LCCallNumber(resultParts[1]);
             result = callNum.getPaddedShelfKey();
