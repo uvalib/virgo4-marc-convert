@@ -1020,6 +1020,11 @@ public class JSONCustomLocationMixin extends SolrIndexerMixin
                     {
                         mappedCurLoc = mappedCurLoc.replaceAll("[ ]?[$]l[k]?", "");
                     }
+                    if (mappedCurLoc.contains("CHECKED OUT") && mappedHomeLocName != null)
+                    {
+                        mappedCurLoc = mappedHomeLocName + " " + mappedCurLoc;
+                    }
+
                     resultSet.add(mappedCurLoc);
                     continue; // Used
                 }
