@@ -260,7 +260,7 @@ public class UrlMixin extends SolrIndexerMixin
                 else if (firstIndicatorValid(dField) && dField.getIndicator2() == '1' && !isSupplementalUrl(dField))
                 {
                     String subr = dField.getSubfieldsAsString("e");
-                    if (subr.contains("UVA TrackSys")) continue;
+                    if (subr != null && subr.contains("UVA TrackSys")) continue;
                     String label = (dField.getSubfield('3') != null) ? dField.getSubfield('3').getData() : defaultLabel;
                     if (dField.getSubfield('u') != null) 
                     {
