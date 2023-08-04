@@ -63,7 +63,8 @@ public class DlMixin extends SolrIndexerMixin
             {
                 logger.info(publishedMap.size() == 0 ? "Initializing PublishedMap" : 
                        (lastInitializedTimeStamp == 0L ) ? "Re-Initializing PublishedMap due to message-attribute-ignore-cache found" : "Re-Initializing PublishedMap after 1 minute");
-                lastInitializedTimeStamp = now; 
+                lastInitializedTimeStamp = now;
+                publishedMap.clear();
                 try
                 {
                     final URL url = new URL(JSON_SERVICE_URL2);
