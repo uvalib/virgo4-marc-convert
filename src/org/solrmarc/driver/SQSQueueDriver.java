@@ -3,6 +3,7 @@ package org.solrmarc.driver;
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.IOException;
+import java.io.InputStream;
 import java.io.PrintStream;
 import java.io.UnsupportedEncodingException;
 import java.util.Arrays;
@@ -26,6 +27,8 @@ import org.solrmarc.solr.StdOutProxy;
 import org.solrmarc.solr.XMLOutProxy;
 import org.solrmarc.tools.PropertyUtils;
 
+//New code commented out for interim check-in
+//import edu.virginia.marc.validation.MarcValidatedReader;
 import joptsimple.OptionParser;
 import joptsimple.OptionSet;
 
@@ -48,6 +51,8 @@ public class SQSQueueDriver extends IndexDriver
     public final static String VIRGO4_TRACKSYS_ENRICH_OEMBED_ROOT = "VIRGO4_TRACKSYS_ENRICH_OEMBED_ROOT";
     public final static String VIRGO4_TRACKSYS_ENRICH_OCR_ROOT = "VIRGO4_TRACKSYS_ENRICH_OCR_ROOT";
     public final static String VIRGO4_TRACKSYS_ENRICH_S3_BUCKET = "VIRGO4_TRACKSYS_ENRICH_S3_BUCKET";
+//  New code commented out for interim check-in
+//    public final static String VIRGO4_XSLT_VALIDATE_FILE = "VIRGO4_XSLT_VALIDATE_FILE";
     public final static int VIRGO4_MARC_CONVERT_QUEUE_POLL_TIMEOUT = 20; // in seconds
     private boolean reconfigurable = false;
     private Properties indexSpecMap = null; 
@@ -114,8 +119,15 @@ public class SQSQueueDriver extends IndexDriver
     public void execute()
     {
         processArgs(args, true);
-        String[] awsLibDirStrs = {"lib_aws"};
-        Boot.extendClasspathWithLocalJarDirs(homeDirStrs, awsLibDirStrs);
+        try
+        {
+            Class.forName("com.amazonaws.AmazonWebServiceClient");
+        }
+        catch (ClassNotFoundException e1)
+        {
+            String[] awsLibDirStrs = {"lib_aws"};
+            Boot.extendClasspathWithLocalJarDirs(homeDirStrs, awsLibDirStrs);
+        }
 
         indexerFactory = ValueIndexerFactory.initialize(homeDirStrs);
         initializeFromOptions();
@@ -134,6 +146,13 @@ public class SQSQueueDriver extends IndexDriver
             try
             {
                 reader = MarcReaderFactory.makeReader((MarcReaderConfig)readerConfig, ValueIndexerFactory.instance().getHomeDirs(), inputFiles);
+//              New code commented out for interim check-in
+//                String validateXSLTFile = getSqsParm(options, "xsltFile", VIRGO4_XSLT_VALIDATE_FILE);
+//                if (validateXSLTFile != null)
+//                {
+//                    InputStream is = PropertyUtils.getPropertyFileInputStream(homeDirStrs, validateXSLTFile);
+//                    reader = new MarcValidatedReader(reader, is);
+//                }
             }
             catch (IOException e)
             {
@@ -360,6 +379,13 @@ public class SQSQueueDriver extends IndexDriver
             logger.warn("Using SolrMarc with a marc4j version < 2.8 uses deprecated code in SolrMarc");
             reader = SolrMarcMarcReaderFactory.instance().makeReader(readerProps, ValueIndexerFactory.instance().getHomeDirs(), inputQueueName);
         }
+//        New code commented out for interim check-in
+//        String validateXSLTFile = getSqsParm(options, "xsltFile", VIRGO4_XSLT_VALIDATE_FILE);
+//        if (validateXSLTFile != null)
+//        {
+//            reader = new MarcValidatedReader(reader, validateXSLTFile);
+//        }
+
     }
 
     @Override 

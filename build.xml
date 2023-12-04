@@ -2,13 +2,16 @@
 <project basedir="." default="build" name="SolrMarc_SQS_Adapter">
     <property environment="env"/>
     <property name="debuglevel" value="source,lines,vars"/>
-    <property name="target" value="1.8"/>
-    <property name="source" value="1.8"/>
+   <!--  <property name="target" value="11"/>
+    <property name="source" value="11"/>  -->
     <path id="SQSReader.classpath">
         <fileset dir="lib_solrmarc_install">                                                                                                                          
             <include name="**/*.jar" />                                                                                                          
         </fileset>                                                                                                                                   
         <fileset dir="lib_aws">                                                                                                                          
+            <include name="**/*.jar" />                                                                                                          
+        </fileset>                                                                                                                                   
+        <fileset dir="lib_xml">                                                                                                                          
             <include name="**/*.jar" />                                                                                                          
         </fileset>                                                                                                                                   
     </path>
@@ -31,7 +34,8 @@
 
     <target depends="init" name="compile">
         <echo message="${ant.project.name}: ${ant.file}"/>
-        <javac debug="true" debuglevel="${debuglevel}" destdir="bin" includeantruntime="false" source="${source}" target="${target}">
+      <!--  <javac debug="true" debuglevel="${debuglevel}" destdir="bin" includeantruntime="false" source="${source}" target="${target}"> -->
+        <javac debug="true" debuglevel="${debuglevel}" destdir="bin" includeantruntime="false" >
             <src path="src"/>
             <classpath refid="SQSReader.classpath"/>
         </javac>

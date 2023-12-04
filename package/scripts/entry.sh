@@ -34,7 +34,8 @@ java -Dsolrmarc.track.solr.progress=false \
      -Dsolrmarc.indexer.chunksize=10 \
      -Dsolrmarc.terminate.on.marc.exception=false \
      -Dsolrmarc.track.progress=5000 \
-     -classpath dist/marcsqs_reader.jar:$SOLRMARC_JAR org.solrmarc.driver.Boot SQSQueueDriver \
+     -classpath dist/marcsqs_reader.jar:$SOLRMARC_JAR:lib_solrmarc_install/lib/*:lib_solrmarc_install/lib-solrj/*:lib_aws/*:lib_xml/* \
+     org.solrmarc.driver.SQSQueueDriver \
      -dir . \
      $VIRGO4_MARC_CONVERT_READER_CONFIG \
      $VIRGO4_MARC_CONVERT_CONFIG

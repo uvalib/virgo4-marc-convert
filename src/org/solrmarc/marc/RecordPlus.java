@@ -15,13 +15,18 @@ import org.marc4j.marc.VariableField;
 public class RecordPlus implements Record {
     private static final long serialVersionUID = 1110801786023226073L;
 
-    final Record wrappedRecord;
+    Record wrappedRecord;
     Map<String, String> extraDataMap;
 
     public RecordPlus(Record wrapThis)
     {
         wrappedRecord = wrapThis;
         extraDataMap = new LinkedHashMap<String, String>();
+    }
+
+    public void replaceRecord(Record rec)
+    {
+        wrappedRecord = rec;
     }
 
     public void addExtraData(String key, String value)
