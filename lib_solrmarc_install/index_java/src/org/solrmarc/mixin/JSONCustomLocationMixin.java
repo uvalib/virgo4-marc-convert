@@ -22,20 +22,18 @@ import java.util.regex.Pattern;
 
 import org.apache.log4j.Logger;
 import org.marc4j.MarcException;
+import org.marc4j.callnum.LCCallNumber;
 import org.marc4j.marc.DataField;
 import org.marc4j.marc.MarcFactory;
 import org.marc4j.marc.Record;
 import org.marc4j.marc.Subfield;
 import org.marc4j.marc.VariableField;
 import org.marc4j.util.JsonParser;
-import org.solrmarc.callnum.CallNumUtils;
-import org.solrmarc.callnum.LCCallNumber;
 import org.solrmarc.index.SolrIndexer;
 import org.solrmarc.index.SolrIndexerMixin;
 import org.solrmarc.index.indexer.ValueIndexerFactory;
 import org.solrmarc.index.mapping.AbstractMultiValueMapping;
 import org.solrmarc.tools.StringNaturalCompare;
-import org.solrmarc.tools.Utils;
 
 import org.solrmarc.tools.SolrMarcDataException;
 import org.solrmarc.tools.SolrMarcDataException.eDataErrorLevel;
@@ -265,7 +263,7 @@ public class JSONCustomLocationMixin extends SolrIndexerMixin
             }
             String firstNum = values.iterator().next();
             String parts[] = firstNum.split(":", 2);
-            if ((parts[0].equals("LC") || parts[0].equals("")) && ((new LCCallNumber(parts[1]).isValid())) && values.size() > maxLCEntries)
+            if ((parts[0].equals("LC") || parts[0].equals("")) && ((new org.marc4j.callnum.LCCallNumber(parts[1]).isValid())) && values.size() > maxLCEntries)
             {
                 maxLCEntries = values.size();
                 // maxLCEntriesKey = key;
@@ -327,7 +325,7 @@ public class JSONCustomLocationMixin extends SolrIndexerMixin
         for (String field : fieldList)
         {
             String fieldParts[] = field.split(":", 2);
-            if (fieldParts[0].equals("LC") || (fieldParts[0].equals("") && ((new LCCallNumber(field).isValid()))))
+            if (fieldParts[0].equals("LC") || (fieldParts[0].equals("") && ((new org.marc4j.callnum.LCCallNumber(field).isValid()))))
             {
                 hasLCNumber = true;
                 break;
@@ -339,7 +337,7 @@ public class JSONCustomLocationMixin extends SolrIndexerMixin
             List<String> fList2 = get050Entries(record);
             for (String field : fList2)
             {
-                if (((new LCCallNumber(field).isValid())))
+                if (((new org.marc4j.callnum.LCCallNumber(field).isValid())))
                 {
                     fieldList.add("LC:" + field);
                 }
@@ -365,7 +363,7 @@ public class JSONCustomLocationMixin extends SolrIndexerMixin
         }
         for (String field : fList1)
         {
-            if (((new LCCallNumber(field).isValid())))
+            if (((new org.marc4j.callnum.LCCallNumber(field).isValid())))
             {
                 fieldList.add("LC:" + field);
             }
@@ -376,7 +374,7 @@ public class JSONCustomLocationMixin extends SolrIndexerMixin
             {
                 String fieldParts[] = field.split(":", 2);
                 // dont add LC numbers that aren't valid according to the CallNumUtil routine
-                if ((fieldParts[0].equals("LC") || fieldParts[0].equals("")) && ((new LCCallNumber(fieldParts[1]).isValid())))
+                if ((fieldParts[0].equals("LC") || fieldParts[0].equals("")) && ((new org.marc4j.callnum.LCCallNumber(fieldParts[1]).isValid())))
                     fieldList.add(field);
             }
         }
@@ -507,7 +505,7 @@ public class JSONCustomLocationMixin extends SolrIndexerMixin
         }
         if (mapName.equals("callnumber_map.properties"))
         {
-            int partNum = Utils.isNumber(part) ? Integer.parseInt(part) : 0;
+            int partNum = org.solrmarc.tools.Utils.isNumber(part) ? Integer.parseInt(part) : 0;
             if (result == null) return (result);
             if (partNum == 0) return (prefix + " - " + result.replaceAll("[|]", " - "));
             String resultParts[] = result.split("[|]");
@@ -519,7 +517,7 @@ public class JSONCustomLocationMixin extends SolrIndexerMixin
             if (result == null) return (result);
             if (result.startsWith("{"))
             {
-                String shelfKey = getLCShelfkey(valParts[1], record.getControlNumber());
+                String shelfKey = getLCShelfkey(valParts[1]);
                 String keyDigits = shelfKey.substring(4, 8);
                 String ranges[] = result.replaceAll("[{]", "").split("[}]");
                 for (String range : ranges)
@@ -557,9 +555,9 @@ public class JSONCustomLocationMixin extends SolrIndexerMixin
         String result = getBestSingleCallNumber(record);
         if (result == null) return (result);
         String resultParts[] = result.split(":", 2);
-        if (sortableFlag && (resultParts[0].equals("LC") || (resultParts[0].equals("") && ((new LCCallNumber(resultParts[1]).isValid()))))) 
+        if (sortableFlag && (resultParts[0].equals("LC") || (resultParts[0].equals("") && ((new org.marc4j.callnum.LCCallNumber(resultParts[1]).isValid()))))) 
         {
-            result = getLCShelfkey(resultParts[1], record.getControlNumber());
+            result = getLCShelfkey(resultParts[1]);
         }
         else if (resultParts[1].startsWith("M@")) 
             result = result.replaceAll("M@", "MSS ");
@@ -567,10 +565,15 @@ public class JSONCustomLocationMixin extends SolrIndexerMixin
 
     }
 
-    public String getLCShelfkey(String lcCallNum, String controlNum)
+    public String getLCShelfkey(String lcCallNum)
     {
         try {
-            String result = CallNumUtils.getLCShelfkey(lcCallNum, controlNum);
+            org.marc4j.callnum.LCCallNumber lcNum = new org.marc4j.callnum.LCCallNumber(lcCallNum);
+            String result = null;
+            if (lcNum.isValid()) 
+            {
+                result = lcNum.getShelfKey();
+            }
             return(result);
         }
         catch (IllegalArgumentException iae)
@@ -585,9 +588,13 @@ public class JSONCustomLocationMixin extends SolrIndexerMixin
         String result = null;
         if (callnum == null) return (null);
         String resultParts[] = callnum.split(":", 2);
-        if ((resultParts[0].equals("LC") || resultParts[0].equals("")) && ((new LCCallNumber(resultParts[1]).isValid())))
-        {
-            result = getLCShelfkey(resultParts[1], record.getControlNumber());
+        if ((resultParts[0].equals("LC") || resultParts[0].equals("")))
+        { 
+            org.marc4j.callnum.LCCallNumber lcNum = new org.marc4j.callnum.LCCallNumber(resultParts[1]);
+            if (lcNum.isValid())
+            {
+                result = lcNum.getShelfKey();
+            }
         }
         return (result);
     }
@@ -596,7 +603,7 @@ public class JSONCustomLocationMixin extends SolrIndexerMixin
     {
         String shelfKey = getShelfKey(record);
         if (shelfKey == null) return (shelfKey);
-        String revShelfKey = CallNumUtils.getReverseShelfKey(shelfKey);
+        String revShelfKey = org.marc4j.callnum.Utils.getReverseShelfKey(shelfKey);
         return (revShelfKey);
     }
 
@@ -606,9 +613,13 @@ public class JSONCustomLocationMixin extends SolrIndexerMixin
         String result = null;
         if (callnum == null) return (null);
         String resultParts[] = callnum.split(":", 2);
-        if ((resultParts[0].equals("LC") || resultParts[0].equals("")) && ((new LCCallNumber(resultParts[1]).isValid())))
+        if ((resultParts[0].equals("LC") || resultParts[0].equals("")) )
         {
-            result = getLCShelfkey(resultParts[1], record.getControlNumber());
+            org.marc4j.callnum.LCCallNumber lcNum = new org.marc4j.callnum.LCCallNumber(resultParts[1]);
+            if (lcNum.isValid()) 
+            {
+                result = lcNum.getShelfKey();
+            }
         }
         return (result);
     }
@@ -617,7 +628,7 @@ public class JSONCustomLocationMixin extends SolrIndexerMixin
     {
         String shelfKey = getLCShelfKey(record);
         if (shelfKey == null) return (shelfKey);
-        String revShelfKey = CallNumUtils.getReverseShelfKey(shelfKey);
+        String revShelfKey = org.marc4j.callnum.Utils.getReverseShelfKey(shelfKey);
         return (revShelfKey);
     }
 
@@ -633,7 +644,7 @@ public class JSONCustomLocationMixin extends SolrIndexerMixin
         if (author.size() > 0)
         {
         	bestAuthor = author.get(0);
-        	bestAuthorCutter = org.solrmarc.callnum.Utils.getCutterFromAuthor(bestAuthor);
+        	bestAuthorCutter = org.marc4j.callnum.Utils.getCutterFromAuthor(bestAuthor);
         }
         else
         {
@@ -685,10 +696,13 @@ public class JSONCustomLocationMixin extends SolrIndexerMixin
         }
         String result = null;
         String resultParts[] = callnum.split(":", 2);
-        if (resultParts[0].startsWith("LC") || (new LCCallNumber(resultParts[1]).isValid()))
+        if (resultParts[0].startsWith("LC"))
         {
-            LCCallNumber callNum = new LCCallNumber(resultParts[1]);
-            result = callNum.getPaddedShelfKey();
+            org.marc4j.callnum.LCCallNumber callNum = new org.marc4j.callnum.LCCallNumber(resultParts[1]);
+            if (callNum.isValid() && callNum.getClassLetters().length() < 4)
+            {
+                result = callNum.getPaddedShelfKey();
+            }
         }
         return (result);
     }
@@ -697,7 +711,7 @@ public class JSONCustomLocationMixin extends SolrIndexerMixin
     {
         String shelfKey = getUniquishLCShelfKey(record, uniqueness);
         if (shelfKey == null) return (shelfKey);
-        String revShelfKey = CallNumUtils.getReverseShelfKey(shelfKey);
+        String revShelfKey = org.marc4j.callnum.Utils.getReverseShelfKey(shelfKey);
         return (revShelfKey);
     }
 
