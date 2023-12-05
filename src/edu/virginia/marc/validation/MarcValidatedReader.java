@@ -30,7 +30,7 @@ public class MarcValidatedReader implements MarcReader
     MarcReader wrappedReader;
     ReusuableMarcXmlWriter writerRaw;
     ReusuableMarcXmlWriter writerTransformed;
-    
+
     public MarcValidatedReader(MarcReader toWrap, String transformFileName)
     {
         wrappedReader = toWrap;
@@ -49,7 +49,7 @@ public class MarcValidatedReader implements MarcReader
         writerTransformed = makeXMLWriter(transformstr);
 
     }
-    
+
     public MarcValidatedReader(MarcReader toWrap, InputStream transformStream)
     {
         wrappedReader = toWrap;
@@ -67,15 +67,15 @@ public class MarcValidatedReader implements MarcReader
         writerRaw = makeXMLWriter(null);
 
     }
-    
+
     private static String readStreamIntoString(InputStream stream) throws IOException
     {
         Reader in = new BufferedReader(new InputStreamReader(stream));
-        
+
         StringBuilder sb = new StringBuilder();
         char[] chars = new char[4096];
         int length;
-        
+
         while ((length = in.read(chars)) > 0)
         {
             sb.append(chars, 0, length);
@@ -83,10 +83,10 @@ public class MarcValidatedReader implements MarcReader
         return sb.toString();
     }
 
-    private static ReusuableMarcXmlWriter makeXMLWriter(String transformString)
+    public static ReusuableMarcXmlWriter makeXMLWriter(String transformString)
     {
         StringWriter swriter = new StringWriter();
-        
+
         StreamSource transform = null;
         if (transformString != null) 
         {
@@ -118,7 +118,7 @@ public class MarcValidatedReader implements MarcReader
         {
             toDecorate = new RecordPlus(recordRead);
         }
-        
+
         String recordAsXML = getRecordAsXML(toDecorate, writerRaw);
         String recordAsXML2 = getRecordAsXML(toDecorate, writerTransformed);
         if (recordsDifferent(recordAsXML, recordAsXML2))
@@ -138,70 +138,68 @@ public class MarcValidatedReader implements MarcReader
         }
         return toDecorate;
     }
-    
+
     public static String unchanged(String str) {
         return str;
     }
-    
+
     public static Function<String, String> LINE_NORMALIZER_FOR_UNCHANGED = MarcValidatedReader::unchanged;
-    
+
     private boolean recordsDifferent(String recordAsXML, String recordAsXML2)
     {
         String record11 = recordAsXML.replaceAll("marc:","").replaceAll("><", ">\n<")   .replaceAll(" xmlns(:marc)?=\"http://www.loc.gov/MARC21/slim\"", "").replaceAll(">\n<(sub|/data)", "><$1").replaceAll("<(/)?collection>(\n)?", "");
         record11 = record11.replaceAll("<datafield tag=\"991\"[^\n]*\n", "");
-        
+
         String record22 = recordAsXML2.replaceAll("marc:","").replaceAll("\n[ ]+", "\n").replaceAll(" xmlns(:marc)?=\"http://www.loc.gov/MARC21/slim\"", "").replaceAll(">\n<(sub|/data)", "><$1").replaceAll("<(/)?collection>(\n)?", "");
         record22 = record22.replaceAll("<datafield tag=\"991\"[^\n]+\n", "");
-        
-        if (!record11.equals(record22))
-        {
-            String[] l1 = record11.split("\n");
-            String[] l2 = record22.split("\n");
-            DiffRowGenerator generator = DiffRowGenerator.create()
-                    .showInlineDiffs(true)
-                    .mergeOriginalRevised(true)
-                    .inlineDiffByWord(true)
-                    .lineNormalizer(LINE_NORMALIZER_FOR_UNCHANGED)
-                    .oldTag(f -> "~")      //introduce markdown style for strikethrough
-                    .newTag(f -> "**")     //introduce markdown style for bold
-                    .build();
 
-            //compute the differences for two test texts.
-            List<DiffRow> rows = generator.generateDiffRows(Arrays.asList(l1), Arrays.asList(l2));
-            
-            for (DiffRow row : rows) 
-            {
-                if (row.getTag() == Tag.EQUAL)
-                {
-                    System.out.println("===" + row.getOldLine());
-                }
-                else if (row.getTag() == Tag.INSERT)
-                {
-                    System.out.println("+++" + row.getNewLine());
-                }
-                else if (row.getTag() == Tag.DELETE)
-                {
-                    System.out.println("---" + row.getOldLine());
-                }
-                else if (row.getTag() == Tag.CHANGE)
-                {
-                    System.out.println(" < " + row.getOldLine());
-                    System.out.println(" > " + row.getNewLine());
-                }
-
-            }
-        }
-        
+//        if (!record11.equals(record22))
+//        {
+//            String[] l1 = record11.split("\n");
+//            String[] l2 = record22.split("\n");
+//            DiffRowGenerator generator = DiffRowGenerator.create()
+//                    .showInlineDiffs(false)
+//                    .mergeOriginalRevised(false)
+//                    .inlineDiffByWord(true)
+//                    .lineNormalizer(LINE_NORMALIZER_FOR_UNCHANGED)
+//                    .oldTag(f -> "~")      //introduce markdown style for strikethrough
+//                    .newTag(f -> "**")     //introduce markdown style for bold
+//                    .build();
+//
+//            //compute the differences for two test texts.
+//            List<DiffRow> rows = generator.generateDiffRows(Arrays.asList(l1), Arrays.asList(l2));
+//            
+//            for (DiffRow row : rows) 
+//            {
+//                if (row.getTag() == Tag.EQUAL)
+//                {
+//                    System.out.println("===" + row.getOldLine());
+//                }
+//                else if (row.getTag() == Tag.INSERT)
+//                {
+//                    System.out.println("+++" + row.getNewLine());
+//                }
+//                else if (row.getTag() == Tag.DELETE)
+//                {
+//                    System.out.println("---" + row.getOldLine());
+//                }
+//                else if (row.getTag() == Tag.CHANGE)
+//                {
+//                    System.out.println(" < " + row.getOldLine());
+//                    System.out.println(" > " + row.getNewLine());
+//                }
+//
+//            }
+//        }
+//        
         return (!record11.equals(record22));
     }
 
-    private static String getRecordAsXML(Record marcRecord, ReusuableMarcXmlWriter writer)
+    public static String getRecordAsXML(Record marcRecord, ReusuableMarcXmlWriter writer)
     {
         writer.write(marcRecord);
         String strResult = writer.getRecordAndReset();
         return(strResult);
     }
-   
 
-    
 }

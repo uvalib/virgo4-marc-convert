@@ -14,6 +14,7 @@ import javax.xml.transform.stream.StreamSource;
 
 import org.marc4j.marc.MarcFactory;
 import org.marc4j.marc.Record;
+import org.solrmarc.index.extractor.impl.fullrecord.FullRecordAsXMLValueExtractor;
 import org.solrmarc.index.indexer.ValueIndexerFactory;
 import org.solrmarc.marc.RecordPlus;
 import org.solrmarc.tools.PropertyUtils;
@@ -28,11 +29,15 @@ import com.helger.schematron.svrl.jaxb.FiredRule;
 import com.helger.schematron.svrl.jaxb.SchematronOutputType;
 import com.helger.schematron.svrl.jaxb.SuccessfulReport;
 
+import edu.virginia.marc.validation.MarcValidatedReader;
+import edu.virginia.marc.validation.ReusuableMarcXmlWriter;
+
 public class SchematronErrors
 {
     static ISchematronResource aResPure = null;
     static Object semaphore = new Object();
-
+    ReusuableMarcXmlWriter writerRaw = null;
+    
     public SchematronErrors()
     {
         
@@ -73,6 +78,15 @@ public class SchematronErrors
         {
             recordAsXML2 = ((RecordPlus)record).getExtraData("transformedXML");
         }
+        if (recordAsXML2 == null)
+        {
+//            recordAsXML2 = FullRecordAsXMLValueExtractor.toXMLString(record, false); 
+            if (writerRaw == null)
+            {
+                writerRaw = MarcValidatedReader.makeXMLWriter(null);
+            }
+            recordAsXML2 = MarcValidatedReader.getRecordAsXML(record, writerRaw);
+        }
         if (recordAsXML2 != null)
         {
             result = getErrorsXMLViaPureSchematron (aResPure, recordAsXML2, record, recordName);
@@ -83,6 +97,26 @@ public class SchematronErrors
         }
         return result;
     }
+    
+    public Collection<String> getWasEdited(Record record)
+    {
+        Collection<String> result = new ArrayList<String>();
+        String recordAsXML1 = null;
+        String recordAsXML2 = null;
+        if (record instanceof RecordPlus)
+        {
+            recordAsXML1 = ((RecordPlus)record).getExtraData("originalXML");
+            recordAsXML2 = ((RecordPlus)record).getExtraData("transformedXML");
+            if (recordAsXML1 != null && recordAsXML2 != null)
+            {
+                // was edited by XSLT transform
+                result.add("Edited");
+            }
+        }
+
+        return result;
+    }
+
     
     private Collection<String> getErrorsXMLViaPureSchematron(ISchematronResource aResPure, String recordAsXMLStr, Record record, String recordName)
     {
