@@ -173,7 +173,7 @@ public class SchematronErrors
 
     private static String translateLocation(String location, String recordAsXML)
     {
-        String recordAsXmlparsed = recordAsXML.replaceAll("marc:","").replaceAll("\n[ ]+", "\n").replaceAll(" xmlns(:marc)?=\"http://www.loc.gov/MARC21/slim\"", "").replaceAll(">\n<(sub|/data)", "><$1");
+        String recordAsXmlparsed = recordAsXML.replaceAll("><marc:",">\n<marc:").replaceAll("marc:",  "").replaceAll("\n[ ]+", "\n").replaceAll(" xmlns(:marc)?=\"http://www.loc.gov/MARC21/slim\"", "").replaceAll(">\n<(sub|/data)", "><$1");
         String[] recordlines = recordAsXmlparsed.split("\n");
         if (location.matches(".*controlfield.*"))
         {
