@@ -379,7 +379,8 @@ public class SQSQueueDriver extends IndexDriver
         String validateXSLTFile = getSqsParm(options, "xsltFile", VIRGO4_XSLT_VALIDATE_FILE);
         if (validateXSLTFile != null)
         {
-            reader = new MarcValidatedReader(reader, validateXSLTFile);
+            InputStream is = PropertyUtils.getPropertyFileInputStream(homeDirStrs, validateXSLTFile);
+            reader = new MarcValidatedReader(reader, is);
         }
 
     }
