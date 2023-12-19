@@ -126,7 +126,10 @@ public class SchematronErrors
         try
         {
             sss = new StreamSource(new StringReader(recordAsXMLStr));
-            SchematronOutputType ot = aResPure.applySchematronValidationToSVRL(sss);
+            SchematronOutputType ot = null;
+            synchronized (semaphore) {
+                ot = aResPure.applySchematronValidationToSVRL(sss);
+            }
             List<Object> errs = ot.getActivePatternAndFiredRuleAndFailedAssert();
             ActivePattern ap = null;
             FiredRule fr = null;
