@@ -175,6 +175,7 @@ public class DirectorMixin extends SolrIndexerMixin
         responsibility1 = responsibility1.replaceAll("un(e|a) pel(i\u0301|i)cula de", "a flim by");//spanish
         responsibility1 = responsibility1.replaceAll("[Mm]is[e]? en sc(e|e\u0300)ne( de)?", "a flim by");//french
         responsibility1 = responsibility1.replaceAll("Film by", "a flim by");
+        responsibility1 = responsibility1.replaceAll("A film by", "a film by");
         //responsibility1 = responsibility1.replaceAll("\\bpar\\b", "maybe by");
         //responsibility1 = responsibility1.replaceAll("^by", "maybe by");
         //responsibility1 = responsibility1.replaceAll("^von", "maybe by");
@@ -255,6 +256,7 @@ public class DirectorMixin extends SolrIndexerMixin
                     }
                     String part1 = part.replaceAll("[ ]?[(][ ]*([a-z]*[/]|assistant )?[Dd]irector([/][a-z]*)?[ ]*[)]", " director"); // change (director)  to director
                     part1 = part1.replaceAll("[ ]?[(][^)]*[)]", ""); // throw away parenthetical phrases
+                    part1 = part1.replaceAll("[ ]?['][^']*['] ", " "); // throw away single quoted phrases
                     if (!part.equals(part1))
                     {
                         part = part1;
