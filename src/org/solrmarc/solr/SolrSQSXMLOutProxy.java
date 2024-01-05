@@ -59,6 +59,7 @@ public class SolrSQSXMLOutProxy extends SolrProxy
                     inputDoc.getFieldValue("id") != null ? inputDoc.getFieldValue("id").toString() : "<no id>";
         String xml = ClientUtils.toXML(inputDoc);
         RecordPlus recPlus = (RecordPlus)recDoc.getRec();
+        logger.debug("Outputing record "+ recPlus.getControlNumber());
         if (recPlus.hasExtraData("message-attribute-message-id"))
         {
         	id = recPlus.getExtraData("message-attribute-message-id");
@@ -80,6 +81,8 @@ public class SolrSQSXMLOutProxy extends SolrProxy
         }
         aws_sqs.getSQS().sendMessage(message);
         aws_sqs.remove(id, messageReceiptHandle);
+        logger.debug("Removing message for record "+ recPlus.getControlNumber() + " from queue");
+
         return(1);
     }
 

@@ -154,6 +154,7 @@ public class MarcSQSReader implements MarcReader
         {
             Message message = curMessages.get(curMessageIndex++);
             Record record = processMessageToRecord(message);
+            logger.debug("Received message with record "+ record.getControlNumber());
             return(record);
         }
         else 

@@ -15,9 +15,11 @@ import java.util.function.Function;
 
 import javax.xml.transform.stream.StreamSource;
 
+import org.apache.log4j.Logger;
 import org.marc4j.MarcReader;
 import org.marc4j.MarcXmlReader;
 import org.marc4j.marc.Record;
+import org.solrmarc.marc.MarcSQSReader;
 import org.solrmarc.marc.RecordPlus;
 import org.xml.sax.InputSource;
 
@@ -27,6 +29,8 @@ import com.github.difflib.text.DiffRow.Tag;
 
 public class MarcValidatedReader implements MarcReader
 {
+    private final static Logger logger = Logger.getLogger(MarcValidatedReader.class);
+
     MarcReader wrappedReader;
     ReusuableMarcXmlWriter writerRaw;
     ReusuableMarcXmlWriter writerTransformed;
@@ -118,6 +122,8 @@ public class MarcValidatedReader implements MarcReader
         {
             toDecorate = new RecordPlus(recordRead);
         }
+        
+        logger.debug("Transforming record "+ toDecorate.getControlNumber());
 
         String recordAsXML = getRecordAsXML(toDecorate, writerRaw);
         String recordAsXML2 = getRecordAsXML(toDecorate, writerTransformed);
@@ -128,6 +134,7 @@ public class MarcValidatedReader implements MarcReader
             {
                 Record fixedRecord = xmlReader.next();
                 toDecorate.replaceRecord(fixedRecord);
+                logger.debug("Using transformed record "+ toDecorate.getControlNumber());
             }
             toDecorate.addExtraData("originalXML", recordAsXML);
             toDecorate.addExtraData("transformedXML", recordAsXML2);
