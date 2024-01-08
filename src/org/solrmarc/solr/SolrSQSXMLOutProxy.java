@@ -111,6 +111,7 @@ public class SolrSQSXMLOutProxy extends SolrProxy
                 String id = inputDoc.getFieldValue("raw_id") != null ? inputDoc.getFieldValue("raw_id").toString() : 
                             inputDoc.getFieldValue("id") != null ? inputDoc.getFieldValue("id").toString() : "<no id>";
                 RecordPlus recPlus = (RecordPlus)inputRecDoc.getRec();
+                logger.debug("Outputing record "+ recPlus.getControlNumber());
                 if (recPlus.hasExtraData("message-attribute-message-id"))
                 {
                 	id = recPlus.getExtraData("message-attribute-message-id");
@@ -155,8 +156,13 @@ public class SolrSQSXMLOutProxy extends SolrProxy
                 for (BatchResultErrorEntry failed : result.getFailed())
                 {
                     toDeleteMap.remove(failed.getId());
+                    logger.debug("Failed sending for record "+ failed.getId());
                 }
-                aws_sqs.removeBatch(toDeleteMap);   
+                aws_sqs.removeBatch(toDeleteMap); 
+                for (String id : toDeleteMap.keySet())
+                {
+                    logger.debug("Removing message for record "+ id + " from queue");
+                }
             }
             catch (com.amazonaws.services.sqs.model.BatchRequestTooLongException tooBig)
             {
