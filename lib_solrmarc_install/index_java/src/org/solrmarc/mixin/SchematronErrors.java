@@ -12,6 +12,7 @@ import java.util.regex.Pattern;
 
 import javax.xml.transform.stream.StreamSource;
 
+import org.apache.log4j.Logger;
 import org.marc4j.marc.MarcFactory;
 import org.marc4j.marc.Record;
 import org.solrmarc.index.extractor.impl.fullrecord.FullRecordAsXMLValueExtractor;
@@ -34,6 +35,8 @@ import edu.virginia.marc.validation.ReusuableMarcXmlWriter;
 
 public class SchematronErrors
 {
+    private final static Logger logger = Logger.getLogger(DlMixin.class);
+    
     static ISchematronResource aResPure = null;
     static Object semaphore = new Object();
     ReusuableMarcXmlWriter writerRaw = null;
@@ -62,6 +65,7 @@ public class SchematronErrors
     public Collection<String> getErrors(Record record, String schematronFileName)
     {
         Collection<String> result = null;
+        logger.debug("Calling Schematron on record "+ record.getControlNumber());
         if (!isInited())
         {
             synchronized (semaphore) 
@@ -95,6 +99,7 @@ public class SchematronErrors
         {
             result = new ArrayList<String>();
         }
+        logger.debug("Done with Schematron for record "+ record.getControlNumber());
         return result;
     }
     

@@ -142,6 +142,7 @@ public class MarcValidatedReader implements MarcReader
         else // they are "identical" so you could add either.
         {
             toDecorate.addExtraData("transformedXML", recordAsXML2);
+            logger.debug("Not using transformed record "+ toDecorate.getControlNumber());
         }
         return toDecorate;
     }
