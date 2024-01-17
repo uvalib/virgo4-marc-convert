@@ -35,7 +35,7 @@ import edu.virginia.marc.validation.ReusuableMarcXmlWriter;
 
 public class SchematronErrors
 {
-    private final static Logger logger = Logger.getLogger(DlMixin.class);
+    private final static Logger logger = Logger.getLogger(SchematronErrors.class);
     
     static ISchematronResource aResPure = null;
     static Object semaphore = new Object();
