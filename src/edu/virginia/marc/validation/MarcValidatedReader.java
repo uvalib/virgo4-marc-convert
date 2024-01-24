@@ -19,6 +19,7 @@ import org.apache.log4j.Logger;
 import org.marc4j.MarcReader;
 import org.marc4j.MarcXmlReader;
 import org.marc4j.marc.Record;
+import org.solrmarc.driver.PausableReader;
 import org.solrmarc.marc.MarcSQSReader;
 import org.solrmarc.marc.RecordPlus;
 import org.xml.sax.InputSource;
@@ -27,7 +28,7 @@ import com.github.difflib.text.DiffRow;
 import com.github.difflib.text.DiffRowGenerator;
 import com.github.difflib.text.DiffRow.Tag;
 
-public class MarcValidatedReader implements MarcReader
+public class MarcValidatedReader implements MarcReader, PausableReader
 {
     private final static Logger logger = Logger.getLogger(MarcValidatedReader.class);
 
@@ -208,6 +209,21 @@ public class MarcValidatedReader implements MarcReader
         writer.write(marcRecord);
         String strResult = writer.getRecordAndReset();
         return(strResult);
+    }
+
+    @Override
+    public boolean isPaused()
+    {
+        if (wrappedReader instanceof PausableReader)
+        {
+            boolean result = ((PausableReader)wrappedReader).isPaused();
+            if (result) 
+            {
+                logger.debug("wrapped reader is paused");
+            }
+            return (result);
+        }
+        return false;
     }
 
 }

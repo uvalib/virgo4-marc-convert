@@ -13,13 +13,15 @@ import org.marc4j.MarcReaderConfig;
 import org.marc4j.MarcReaderFactory;
 import org.marc4j.MarcScriptedRecordEditReader;
 import org.marc4j.marc.Record;
+import org.solrmarc.driver.PausableReader;
 import org.solrmarc.driver.SQSQueueDriver;
+import org.solrmarc.driver.ThreadedIndexer;
 
 import com.amazonaws.services.sqs.model.Message;
 import com.amazonaws.services.sqs.model.ReceiveMessageRequest;
 import com.amazonaws.util.Base64;
 
-public class MarcSQSReader implements MarcReader
+public class MarcSQSReader implements MarcReader, PausableReader
 {
 
     private String queueUrl = null;
@@ -308,6 +310,16 @@ public class MarcSQSReader implements MarcReader
         }
         end = System.currentTimeMillis();
         System.out.println("Total time (fetch and convert to MARC)= "+ ((1.0 * (end - start)) / 1000.0) + " seconds");
+    }
+
+    @Override
+    public boolean isPaused()
+    {
+        if (driver.getIndexerForJunitTest() instanceof ThreadedIndexer)
+        {
+            ((ThreadedIndexer)driver.getIndexerForJunitTest()).getReadQ().isEmpty();
+        }
+        return false;
     }
 
 }
