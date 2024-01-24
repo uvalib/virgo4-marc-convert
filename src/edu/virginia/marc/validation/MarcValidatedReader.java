@@ -217,10 +217,10 @@ public class MarcValidatedReader implements MarcReader, PausableReader
         if (wrappedReader instanceof PausableReader)
         {
             boolean result = ((PausableReader)wrappedReader).isPaused();
-            if (result) 
-            {
-                logger.debug("wrapped reader is paused");
-            }
+//            if (result) 
+//            {
+//                logger.debug("wrapped reader is paused");
+//            }
             return (result);
         }
         return false;

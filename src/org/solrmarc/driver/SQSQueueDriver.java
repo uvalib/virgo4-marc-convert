@@ -358,14 +358,7 @@ public class SQSQueueDriver extends IndexDriver
     {
         try
         {
-            if (this.reconfigurable) 
-            {
-                reader = new MarcSQSReader(readerConfig, inputQueueName, s3BucketName, false, this);
-            }
-            else 
-            {
-                reader = new MarcSQSReader(readerConfig, inputQueueName, s3BucketName);
-            }
+            reader = new MarcSQSReader(readerConfig, inputQueueName, s3BucketName, false, this, this.reconfigurable);
         }
 //        catch (IOException e)
 //        {

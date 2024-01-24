@@ -37,6 +37,7 @@ public class MarcSQSReader implements MarcReader, PausableReader
     private MarcReaderConfig config = null;
     private SQSQueueDriver driver = null;
     private int messagesSinceLastSleep = 0;
+    private boolean reconfigurable = false;
 
     private final static Logger logger = Logger.getLogger(MarcSQSReader.class);
 
@@ -50,17 +51,26 @@ public class MarcSQSReader implements MarcReader, PausableReader
         init(config, queueName, s3BucketName);
     }
 
-    public MarcSQSReader(MarcReaderConfig config, String queueName, String s3BucketName, boolean createQueueIfNotExists)
-    {
-        this.createQueueIfNotExists = createQueueIfNotExists;
-   //     this.destroyQueueAtEnd = destroyQueueAtEnd;
-        init(config, queueName, s3BucketName);
-    }
-
-    public MarcSQSReader(MarcReaderConfig config, String queueName, String s3BucketName, boolean createQueueIfNotExists, SQSQueueDriver driver)
+//    public MarcSQSReader(MarcReaderConfig config, String queueName, String s3BucketName, boolean createQueueIfNotExists)
+//    {
+//        this.createQueueIfNotExists = createQueueIfNotExists;
+//   //     this.destroyQueueAtEnd = destroyQueueAtEnd;
+//        init(config, queueName, s3BucketName);
+//    }
+//
+//    public MarcSQSReader(MarcReaderConfig config, String queueName, String s3BucketName, boolean createQueueIfNotExists, SQSQueueDriver driver)
+//    {
+//        this.createQueueIfNotExists = createQueueIfNotExists;
+//        this.driver = driver;
+//   //     this.destroyQueueAtEnd = destroyQueueAtEnd;
+//        init(config, queueName, s3BucketName);
+//    }
+    
+    public MarcSQSReader(MarcReaderConfig config, String queueName, String s3BucketName, boolean createQueueIfNotExists, SQSQueueDriver driver, boolean reconfigurable)
     {
         this.createQueueIfNotExists = createQueueIfNotExists;
         this.driver = driver;
+        this.reconfigurable = reconfigurable;
    //     this.destroyQueueAtEnd = destroyQueueAtEnd;
         init(config, queueName, s3BucketName);
     }
@@ -249,7 +259,7 @@ public class MarcSQSReader implements MarcReader, PausableReader
 
             String indexSpecName = message.getMessageAttributes().get("source") != null ? message.getMessageAttributes().get("source").getStringValue() : null;
 
-            if (indexSpecName != null && driver != null)  
+            if (indexSpecName != null && driver != null && reconfigurable == true)  
             {
                 driver.reconfigureIndexer(indexSpecName);
             }
@@ -317,7 +327,8 @@ public class MarcSQSReader implements MarcReader, PausableReader
     {
         if (driver.getIndexerForJunitTest() instanceof ThreadedIndexer)
         {
-            ((ThreadedIndexer)driver.getIndexerForJunitTest()).getReadQ().isEmpty();
+            boolean result = ((ThreadedIndexer)driver.getIndexerForJunitTest()).getReadQ().isEmpty();
+            return result;
         }
         return false;
     }
