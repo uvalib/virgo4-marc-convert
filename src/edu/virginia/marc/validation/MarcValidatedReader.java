@@ -16,6 +16,7 @@ import java.util.function.Function;
 import javax.xml.transform.stream.StreamSource;
 
 import org.apache.log4j.Logger;
+import org.marc4j.MarcException;
 import org.marc4j.MarcReader;
 import org.marc4j.MarcXmlReader;
 import org.marc4j.marc.Record;
@@ -23,6 +24,7 @@ import org.solrmarc.driver.PausableReader;
 import org.solrmarc.marc.MarcSQSReader;
 import org.solrmarc.marc.RecordPlus;
 import org.xml.sax.InputSource;
+import org.xml.sax.SAXParseException;
 
 import com.github.difflib.text.DiffRow;
 import com.github.difflib.text.DiffRowGenerator;
@@ -130,15 +132,31 @@ public class MarcValidatedReader implements MarcReader, PausableReader
         String recordAsXML2 = getRecordAsXML(toDecorate, writerTransformed);
         if (recordsDifferent(recordAsXML, recordAsXML2))
         {
-            MarcReader xmlReader = new MarcXmlReader(new InputSource(new StringReader(recordAsXML2)));
-            if (xmlReader.hasNext()) 
-            {
-                Record fixedRecord = xmlReader.next();
-                toDecorate.replaceRecord(fixedRecord);
-                logger.debug("Using transformed record "+ toDecorate.getControlNumber());
+            MarcReader xmlReader;
+            try {
+                xmlReader = new MarcXmlReader(new InputSource(new StringReader(recordAsXML2)));
+                if (xmlReader.hasNext()) 
+                {
+                    Record fixedRecord = xmlReader.next();
+                    if (recordRead.hasErrors())
+                    {
+                        fixedRecord.addErrors(recordRead.getErrors());
+                    }
+                    toDecorate.replaceRecord(fixedRecord);
+                    logger.debug("Using transformed record "+ toDecorate.getControlNumber());
+                }
+                toDecorate.addExtraData("originalXML", recordAsXML);
+                toDecorate.addExtraData("transformedXML", recordAsXML2);
             }
-            toDecorate.addExtraData("originalXML", recordAsXML);
-            toDecorate.addExtraData("transformedXML", recordAsXML2);
+            catch (MarcException me)
+            {
+                if (me.getCause() instanceof SAXParseException)
+                {
+                    logger.warn("Error translating transformed XML back to MarcRecord "+ toDecorate.getControlNumber());
+                    logger.warn(me.getCause().getMessage());
+                    toDecorate.addExtraData("originalXML", recordAsXML);
+                }
+            }
         }
         else // they are "identical" so you could add either.
         {

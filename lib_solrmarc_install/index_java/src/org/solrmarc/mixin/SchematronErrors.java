@@ -117,6 +117,15 @@ public class SchematronErrors
                 // was edited by XSLT transform
                 result.add("Edited");
             }
+            else if (recordAsXML1 != null && recordAsXML2 == null)
+            {
+                // SAXError in translated record
+                result.add("SAX Error");
+            }
+            else if (recordAsXML1 == null && recordAsXML2 != null)
+            {
+                result.add("Unchanged");
+            }
         }
 
         return result;
