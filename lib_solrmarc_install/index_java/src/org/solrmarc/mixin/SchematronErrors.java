@@ -141,9 +141,12 @@ public class SchematronErrors
         {
             sss = new StreamSource(new StringReader(recordAsXMLStr));
             SchematronOutputType ot = null;
+            logger.debug("Entering Schematron semaphore on record "+ record.getControlNumber());
             synchronized (semaphore) {
+                logger.debug("calling validation Schematron on record "+ record.getControlNumber());
                 ot = aResPure.applySchematronValidationToSVRL(sss);
             }
+            logger.debug("Leaving Schematron semaphore on record "+ record.getControlNumber());
             List<Object> errs = ot.getActivePatternAndFiredRuleAndFailedAssert();
             ActivePattern ap = null;
             FiredRule fr = null;
