@@ -144,12 +144,14 @@ public class SQSQueueDriver extends IndexDriver
             try
             {
                 reader = MarcReaderFactory.makeReader((MarcReaderConfig)readerConfig, ValueIndexerFactory.instance().getHomeDirs(), inputFiles);
-                String validateXSLTFile = getSqsParm(options, "xsltFile", VIRGO4_XSLT_VALIDATE_FILE);
-                if (validateXSLTFile != null)
-                {
-                    InputStream is = PropertyUtils.getPropertyFileInputStream(homeDirStrs, validateXSLTFile);
-                    reader = new MarcValidatedReader(reader, is);
-                }
+                //  The following code installs an XSLT transform in the record read pipeline.  
+                //  It has been deemed too expensive of an operation, so it is being removed.
+//                String validateXSLTFile = getSqsParm(options, "xsltFile", VIRGO4_XSLT_VALIDATE_FILE);
+//                if (validateXSLTFile != null)
+//                {
+//                    InputStream is = PropertyUtils.getPropertyFileInputStream(homeDirStrs, validateXSLTFile);
+//                    reader = new MarcValidatedReader(reader, is);
+//                }
             }
             catch (IOException e)
             {
@@ -369,12 +371,14 @@ public class SQSQueueDriver extends IndexDriver
             logger.warn("Using SolrMarc with a marc4j version < 2.8 uses deprecated code in SolrMarc");
             reader = SolrMarcMarcReaderFactory.instance().makeReader(readerProps, ValueIndexerFactory.instance().getHomeDirs(), inputQueueName);
         }
-        String validateXSLTFile = getSqsParm(options, "xsltFile", VIRGO4_XSLT_VALIDATE_FILE);
-        if (validateXSLTFile != null)
-        {
-            InputStream is = PropertyUtils.getPropertyFileInputStream(homeDirStrs, validateXSLTFile);
-            reader = new MarcValidatedReader(reader, is);
-        }
+        //  The following code installs an XSLT transform in the record read pipeline.  
+        //  It has been deemed too expensive of an operation, so it is being removed.
+//        String validateXSLTFile = getSqsParm(options, "xsltFile", VIRGO4_XSLT_VALIDATE_FILE);
+//        if (validateXSLTFile != null)
+//        {
+//            InputStream is = PropertyUtils.getPropertyFileInputStream(homeDirStrs, validateXSLTFile);
+//            reader = new MarcValidatedReader(reader, is);
+//        }
 
     }
 
