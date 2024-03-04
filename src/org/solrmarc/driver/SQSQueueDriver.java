@@ -27,7 +27,6 @@ import org.solrmarc.solr.StdOutProxy;
 import org.solrmarc.solr.XMLOutProxy;
 import org.solrmarc.tools.PropertyUtils;
 
-import edu.virginia.marc.validation.MarcValidatedReader;
 import joptsimple.OptionParser;
 import joptsimple.OptionSet;
 
