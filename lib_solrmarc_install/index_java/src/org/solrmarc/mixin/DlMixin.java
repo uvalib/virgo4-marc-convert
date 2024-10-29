@@ -33,6 +33,7 @@ public class DlMixin extends SolrIndexerMixin
     public final static String s3Bucket = "s3://";
     public final static String s3UrlPrefix = "https://s3.us-east-1.amazonaws.com/";
     public static long lastInitializedTimeStamp = 0L;
+    public static String lastPublishedMapStr = "";
     public final static long ONE_HOUR_IN_MILLISECONDS = (1000L * 60 * 60 * 1);
     public final static long ONE_MINUTE_IN_MILLISECONDS = (1000L * 60 * 1);
     // "https://s3.us-east-1.amazonaws.com/digital-content-metadata-cache-staging/u6288359"
@@ -61,7 +62,7 @@ public class DlMixin extends SolrIndexerMixin
             long now = java.lang.System.currentTimeMillis();
             if (publishedMap.size() == 0 || now - lastInitializedTimeStamp > ONE_MINUTE_IN_MILLISECONDS)
             {
-                logger.info(publishedMap.size() == 0 ? "Initializing PublishedMap" : 
+                logger.debug(publishedMap.size() == 0 ? "Initializing PublishedMap" : 
                        (lastInitializedTimeStamp == 0L ) ? "Re-Initializing PublishedMap due to message-attribute-ignore-cache found" : "Re-Initializing PublishedMap after 1 minute");
                 lastInitializedTimeStamp = now;
                 publishedMap.clear();
@@ -73,6 +74,11 @@ public class DlMixin extends SolrIndexerMixin
                     try
                     {
                         String allIds = readStreamIntoString(urlInputStream).replaceFirst("^[^,]*,[^:]*:.", "");
+                        if (!allIds.contentEquals(lastPublishedMapStr))
+                        {
+                            logger.info(publishedMap.size() == 0 ? "Initializing PublishedMap" : "Re-Initializing PublishedMap : data is actually different");
+                        }
+                        lastPublishedMapStr = allIds;
                         int offset = 0;
                         int endoffset;
                         do
@@ -95,7 +101,7 @@ public class DlMixin extends SolrIndexerMixin
                 }
             }
         }
-        logger.info("PublishedMap initialized, size is " + publishedMap.size()+ " items");
+        logger.debug("PublishedMap initialized, size is " + publishedMap.size()+ " items");
     }
 
     
