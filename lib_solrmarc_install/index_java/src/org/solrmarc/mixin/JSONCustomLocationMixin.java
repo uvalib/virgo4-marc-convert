@@ -786,21 +786,34 @@ public class JSONCustomLocationMixin extends SolrIndexerMixin
         Map<String, Set<String>> callNumberClusterMapNo050 = getCallNumbersCleanedConflated(callNumberFieldListNo050, true);
        
         Set<String>result = getCallNumbersCleanedNew(record, conflatePrefixes, callNumberFieldListNo050, callNumberClusterMapNo050);
-        if (result != null && result.size() == 1)
+        if (result != null)
         {
-            String first = result.iterator().next();
-            if (first.startsWith("XX") || first.equals("Internet"))
+            boolean used050 = false;
+            boolean hasXX = false;
+            for (String callnum : result) 
             {
-                List<String>fList1 = get050Entries(record);
                 Set<String> fieldList = new LinkedHashSet<String>();
-                for (String field : fList1)
+                if ((callnum.startsWith("XX") || callnum.equals("Internet")) && ! used050)
                 {
-                    if (((new org.marc4j.callnum.LCCallNumber(field).isValid())))
+                    hasXX = true;
+                    List<String>fList1 = get050Entries(record);
+                    for (String field : fList1)
                     {
-                        fieldList.add(field);
+                        if (((new org.marc4j.callnum.LCCallNumber(field).isValid())))
+                        {
+                            fieldList.add(field);
+                            used050 = true;
+                        }
                     }
-                }               
-                result = fieldList;
+                }
+                else
+                {
+                    fieldList.add(callnum);
+                }
+                if (hasXX)
+                {
+                    result = fieldList;
+                }
             }
         }
         return(result);
