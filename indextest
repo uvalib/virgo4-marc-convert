@@ -43,7 +43,7 @@ updatefile=$2
 
 echo "    Indexing `basename $updatefile` using config $solrmarcconfig into url $url"
 
-/lib_content23/java_1.8.0/jdk1.8.0/bin/java $THREAD_OPTS -jar $solrmarc_jar IndexDriver -dir $solrmarc_dir -config "$solrmarcconfig" -solrURL $url $updatefile 
+/lib_content23/java_1.8.0/jdk1.8.0/bin/java $THREAD_OPTS -jar $solrmarc_jar IndexDriver -dir $solrmarc_dir,$SCRIPTDIR/lib_aws  -config "$solrmarcconfig" -solrURL $url $updatefile 
 returncode=${PIPESTATUS[0]}
 
 
