@@ -169,6 +169,12 @@ public class UrlMixin extends SolrIndexerMixin
 //        {
 //            url = "http://proxy.its.virginia.edu/login?url=" + url;
 //        }
+        String result = buildParsableURLString(url, label); 
+        return(result);
+    }
+    
+    private String buildParsableURLString(String url, String label) 
+    {
         String result = url + "||" + label;
         return(result);
     }
@@ -250,7 +256,15 @@ public class UrlMixin extends SolrIndexerMixin
             if (field instanceof DataField)
             {
                 DataField dField = (DataField)field;
-                if (firstIndicatorValid(dField) && dField.getIndicator2() == '0')
+                String url = dField.getSubfieldsAsString("u");
+                if (url.contains("ead.lib.virginia.edu"))
+                {
+                    if (url != null) 
+                    {
+                        resultSet.add(buildParsableURLString(url, "GUIDE TO THE COLLECTION"));
+                    }
+                }
+                else if (firstIndicatorValid(dField) && dField.getIndicator2() == '0')
                 {
                     if (dField.getSubfield('u') != null) 
                     {
@@ -380,6 +394,7 @@ public class UrlMixin extends SolrIndexerMixin
             if (field instanceof DataField)
             {
                 DataField dField = (DataField)field;
+                String url = dField.getSubfieldsAsString("u");
 //                if (dField.getIndicator1() == '4' && dField.getIndicator2() == '0')
 //                {
 //                    if (dField.getSubfield('u') != null) 
@@ -387,7 +402,11 @@ public class UrlMixin extends SolrIndexerMixin
 //                        resultSet.add(buildParsableURLString(dField, defaultLabel));
 //                    }
 //                }
-                if (firstIndicatorValid(dField) && dField.getIndicator2() == '1' && isSupplementalUrl(dField))
+                if (url.contains("ead.lib.virginia.edu"))
+                {
+                    // force it to be a regular URL not a supplemental URL
+                }
+                else if (firstIndicatorValid(dField) && dField.getIndicator2() == '1' && isSupplementalUrl(dField))
                 {
                     String subr = dField.getSubfieldsAsString("e");
                     if (subr == null || subr.contains("UVA TrackSys")) continue;
