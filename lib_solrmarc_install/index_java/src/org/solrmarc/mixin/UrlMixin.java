@@ -261,7 +261,7 @@ public class UrlMixin extends SolrIndexerMixin
                 {
                     if (url != null) 
                     {
-                        resultSet.add(buildParsableURLString(url, "GUIDE TO THE COLLECTION"));
+                        resultSet.add(buildParsableURLString(dField, "GUIDE TO THE COLLECTION"));
                     }
                 }
                 else if (firstIndicatorValid(dField) && dField.getIndicator2() == '0')
