@@ -65,14 +65,6 @@ public class AuthorMixin extends SolrIndexerMixin
         }
         
         @Override
-        public String cleanData(VariableField vf, boolean isSubfieldA, String data)
-        {
-            String str = super.cleanData(vf,  isSubfieldA, data);
-            str = DataUtil.cleanByVal(str, roleCleanVal);
-            return(str);
-        }
-        
-        @Override
         public Collection<String> prepData(VariableField vf, char sfCode, String data) throws Exception
         {
             if (this.df == null && vf != null && vf instanceof DataField) 
@@ -110,26 +102,26 @@ public class AuthorMixin extends SolrIndexerMixin
         {
             Collection<String> roles = new LinkedHashSet<String>();
             
-            for (Subfield subfield : df.getSubfields())
+            if (df != null) 
             {
-                try {
-                    if (subfield.getCode() == 'e') 
-                    {
-                        roles.addAll(prepData(df, subfield.getCode(), subfield.getData()));
+                for (Subfield subfield : df.getSubfields())
+                {
+                    try {
+                        if (subfield.getCode() == 'e' || subfield.getCode() == '4')
+                        {
+                            String str = DataUtil.cleanByVal(subfield.getData(), roleCleanVal);
+                            roles.addAll(prepData(df, subfield.getCode(), str));
+                        }
                     }
-                    else if (subfield.getCode() == '4')
-                    {
-                        roles.addAll(prepData(df, subfield.getCode(), subfield.getData()));
+                    catch (Exception e) {
+                        // As Weird Al says, "Just Eat It!"
                     }
                 }
-                catch (Exception e) {
-                    // As Weird Al says, "Just Eat It!"
+                for (String role : roles)
+                {
+                    String output = roleFormat.replaceAll("%d",  role);
+                    sb.append(output);
                 }
-            }
-            for (String role : roles)
-            {
-                String output = roleFormat.replaceAll("%d",  role);
-                sb.append(output);
             }
             super.addAfterField(sb, result);
         }
@@ -150,7 +142,7 @@ public class AuthorMixin extends SolrIndexerMixin
         String specs[] = fieldSpecs.split(":");
         if (roleFormat.equals(""))
         {
-            roleFormat = ", %d";
+            roleFormat = " %d";
         }
         for (String spec : specs) 
         {
