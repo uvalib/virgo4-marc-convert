@@ -27,6 +27,7 @@ import org.solrmarc.index.mapping.AbstractMultiValueMapping;
 import org.solrmarc.index.specification.AbstractSpecificationFactory;
 import org.solrmarc.index.specification.CompositeSpecification;
 import org.solrmarc.index.specification.SingleDataFieldSpecification;
+import org.solrmarc.index.specification.SingleLinkedDataFieldSpecification;
 import org.solrmarc.index.specification.Specification;
 import org.solrmarc.tools.Utils;
 import org.solrmarc.tools.DataUtil;
@@ -150,7 +151,8 @@ public class AuthorMixin extends SolrIndexerMixin
             Specification s;
             if (spec.startsWith("LNK"))
             {
-                s = new SingleDataFieldSpecification(spec.substring(0,6),  spec.substring(6), null, fmt);
+                s = new SingleLinkedDataFieldSpecification(spec.substring(0,6),  spec.substring(6), null);
+                s.setFormatter(fmt);
             }
             else 
             {
@@ -170,6 +172,7 @@ public class AuthorMixin extends SolrIndexerMixin
             decorateMultiValueExtractor("", specName, extractor, mapParts, currentExceptions);
            // AbstractValueIndexer<?> indexer = makeMultiValueIndexer("", specName, extractor, mapParts, currentExceptions);
         }   
+        extractorMap.put(specName,  extractor);
         return extractor;
     }
     
