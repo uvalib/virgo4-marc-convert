@@ -5,6 +5,7 @@ import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.EnumSet;
+import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
@@ -21,6 +22,7 @@ import org.solrmarc.index.extractor.formatter.FieldFormatter.eCleanVal;
 import org.solrmarc.index.extractor.formatter.FieldFormatter.eJoinVal;
 import org.solrmarc.index.extractor.impl.direct.DirectMultiValueExtractor;
 import org.solrmarc.index.extractor.impl.direct.ModifyableMultiValueExtractor;
+import org.solrmarc.index.indexer.AbstractValueIndexer;
 import org.solrmarc.index.indexer.IndexerSpecException;
 import org.solrmarc.index.indexer.ValueIndexerFactory;
 import org.solrmarc.index.mapping.AbstractMultiValueMapping;
@@ -50,7 +52,17 @@ import org.solrmarc.tools.DataUtil;
 
 public class AuthorMixin extends SolrIndexerMixin
 {
-    private static Map<String, DirectMultiValueExtractor> extractorMap = null;
+//    private static Map<String, DirectMultiValueExtractor> extractorMap = null;
+    private ThreadLocal<Map<String, DirectMultiValueExtractor>> extractorMap =
+            new ThreadLocal<Map<String, DirectMultiValueExtractor>>()
+            {
+                @Override
+                protected Map<String, DirectMultiValueExtractor> initialValue()
+                {
+                    return new HashMap<>();
+                }
+            };
+
    
     public static class AuthorFieldFormatter extends FieldFormatterBase {
         DataField df = null;
@@ -68,7 +80,7 @@ public class AuthorMixin extends SolrIndexerMixin
         @Override
         public Collection<String> prepData(VariableField vf, char sfCode, String data) throws Exception
         {
-            if (this.df == null && vf != null && vf instanceof DataField) 
+            if (vf != null && vf instanceof DataField) 
             {
                 this.df = ((DataField)vf);
             }
@@ -118,9 +130,10 @@ public class AuthorMixin extends SolrIndexerMixin
                         // As Weird Al says, "Just Eat It!"
                     }
                 }
-                for (String role : roles)
+                String roleStr = String.join(", ", roles);
+                if (roleStr.length() > 0)
                 {
-                    String output = roleFormat.replaceAll("%d",  role);
+                	String output = roleFormat.replaceAll("%d",  roleStr);
                     sb.append(output);
                 }
             }
@@ -130,11 +143,11 @@ public class AuthorMixin extends SolrIndexerMixin
  
     private DirectMultiValueExtractor buildExtractor(String specName, String fieldSpecs, String roleFormat, String formatSpec)
     {
-        if (extractorMap == null) { 
-            extractorMap = new LinkedHashMap<>();
-        }
-        if (extractorMap.containsKey(specName)) {
-            return(extractorMap.get(specName));
+//        if (extractorMap == null) { 
+//            extractorMap = new LinkedHashMap<>();
+//        }
+        if (extractorMap.get().containsKey(specName)) {
+            return(extractorMap.get().get(specName));
         }
         List<IndexerSpecException> currentExceptions = new ArrayList<>();
         CompositeSpecification specification = null;
@@ -163,16 +176,11 @@ public class AuthorMixin extends SolrIndexerMixin
         extractor = new DirectMultiValueExtractor(specification);
         if (formatSpec != null) 
         {
-            String[] formatSpecs = formatSpec.split(",");
-            List<List<String>>mapParts = new ArrayList<List<String>>();
-            for (String part : formatSpecs)
-            {
-                mapParts.add(Collections.singletonList(part));
-            }
+            List<List<String>>mapParts = parseModifierSpecString(formatSpec);
             decorateMultiValueExtractor("", specName, extractor, mapParts, currentExceptions);
            // AbstractValueIndexer<?> indexer = makeMultiValueIndexer("", specName, extractor, mapParts, currentExceptions);
         }   
-        extractorMap.put(specName,  extractor);
+        extractorMap.get().put(specName,  extractor);
         return extractor;
     }
     
@@ -277,7 +285,7 @@ public class AuthorMixin extends SolrIndexerMixin
             }
             else if (mapParts[0].trim().matches("[-_A-Za-z0-9]*[.]properties.*") && joinIndex == -1)
             {
-                AbstractMultiValueMapping valueMapping = ValueIndexerFactory.instance().createMultiValueMapping(mapParts[0].trim());
+                AbstractMultiValueMapping valueMapping = ValueIndexerFactory.instance().createMultiValueMapping(mapParts);
                 multiValueExtractor.addMap(valueMapping);
             }
             /* 
@@ -296,4 +304,113 @@ public class AuthorMixin extends SolrIndexerMixin
         return (joinIndex);
     }
 
+    /**
+     * Converts a raw modifier-spec string like:
+     *   cleanEach, format("d=> [%d]"), relator_map.properties($4), join(" ")
+     * or the multi-pattern form:
+     *   format("d=> [%d]", "e=>(%d)", "4=>(%d)")
+     * into the List<List<String>> shape decorateMultiValueExtractor expects:
+     * first element of each inner list = command name, rest = its args,
+     * with quotes stripped and escapes resolved.
+     */
+    public static List<List<String>> parseModifierSpecString(String modifierSpec)
+    {
+        List<List<String>> mapSpecs = new ArrayList<>();
+        for (String token : splitTopLevel(modifierSpec, ','))
+        {
+            token = token.trim();
+            if (!token.isEmpty())
+            {
+                mapSpecs.add(parseModifierToken(token));
+            }
+        }
+        return mapSpecs;
+    }
+
+    private static List<String> parseModifierToken(String token)
+    {
+        List<String> result = new ArrayList<>();
+        int parenIdx = token.indexOf('(');
+        if (parenIdx == -1)
+        {
+            // bare word: cleanEach, separate, or a bare "xxx.properties"
+            result.add(unescapeAndUnquote(token));
+            return result;
+        }
+        String name = token.substring(0, parenIdx).trim();
+        int closeIdx = token.lastIndexOf(')');
+        String argsStr = (closeIdx > parenIdx) ? token.substring(parenIdx + 1, closeIdx) : "";
+
+        result.add(name);
+        for (String arg : splitTopLevel(argsStr, ','))
+        {
+            arg = arg.trim();
+            if (!arg.isEmpty())
+            {
+                result.add(unescapeAndUnquote(arg));
+            }
+        }
+        return result;
+    }
+
+    /**
+     * Splits s on delimiter, but only at paren-depth 0 and only when not
+     * inside a quoted string. Parens inside "..." are ignored for depth
+     * purposes -- that's what lets format("d=> [%d]", "e=>(%d)", "4=>(%d)")
+     * split into 3 clean args even though "e=>(%d)" contains parens.
+     */
+    private static List<String> splitTopLevel(String s, char delimiter)
+    {
+        List<String> parts = new ArrayList<>();
+        int depth = 0;
+        boolean inQuotes = false;
+        StringBuilder current = new StringBuilder();
+
+        for (int i = 0; i < s.length(); i++)
+        {
+            char c = s.charAt(i);
+
+            if (c == '\\' && i + 1 < s.length())
+            {
+                current.append(c).append(s.charAt(i + 1));
+                i++;
+                continue;
+            }
+            if (c == '"')
+            {
+                inQuotes = !inQuotes;
+                current.append(c);
+                continue;
+            }
+            if (!inQuotes)
+            {
+                if (c == '(') depth++;
+                else if (c == ')') depth--;
+            }
+            if (c == delimiter && depth == 0 && !inQuotes)
+            {
+                parts.add(current.toString());
+                current.setLength(0);
+            }
+            else
+            {
+                current.append(c);
+            }
+        }
+        if (current.length() > 0)
+        {
+            parts.add(current.toString());
+        }
+        return parts;
+    }
+
+    private static String unescapeAndUnquote(String s)
+    {
+        s = s.trim();
+        if (s.length() >= 2 && s.charAt(0) == '"' && s.charAt(s.length() - 1) == '"')
+        {
+            s = s.substring(1, s.length() - 1);
+        }
+        return s.replace("\\\"", "\"").replace("\\\\", "\\");
+    }
 }
