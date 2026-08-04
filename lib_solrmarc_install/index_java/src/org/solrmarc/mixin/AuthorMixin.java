@@ -52,20 +52,9 @@ import org.solrmarc.tools.DataUtil;
 
 public class AuthorMixin extends SolrIndexerMixin
 {
-//    private static Map<String, DirectMultiValueExtractor> extractorMap = null;
-    private ThreadLocal<Map<String, DirectMultiValueExtractor>> extractorMap =
-            new ThreadLocal<Map<String, DirectMultiValueExtractor>>()
-            {
-                @Override
-                protected Map<String, DirectMultiValueExtractor> initialValue()
-                {
-                    return new HashMap<>();
-                }
-            };
-
+    private Map<String, DirectMultiValueExtractor> extractorMap =  new LinkedHashMap<>();
    
     public static class AuthorFieldFormatter extends FieldFormatterBase {
-        DataField df = null;
         String roleFormat;
         EnumSet<eCleanVal> roleCleanVal;
         
@@ -76,40 +65,7 @@ public class AuthorMixin extends SolrIndexerMixin
             roleCleanVal = EnumSet.noneOf(eCleanVal.class);
             roleCleanVal.add(eCleanVal.CLEAN_EACH);
         }
-        
-        @Override
-        public Collection<String> prepData(VariableField vf, char sfCode, String data) throws Exception
-        {
-            if (vf != null && vf instanceof DataField) 
-            {
-                this.df = ((DataField)vf);
-            }
-            return (super.prepData(vf, sfCode, data));
-        }
-        /*
-         *         
-         *         
-        for (Subfield subfield : df.getSubfields())
-        {
-            final String codeStr = "" + subfield.getCode();
-            if (subfieldPattern.equals(dotPattern) || subfieldPattern.matcher(codeStr).matches())
-            {
-                fmt.addSeparator(sb,cnt);
-                //fmt.addCode(sb,codeStr);
-                Collection<String> prepped = fmt.prepData(vf, subfield.getCode(), subfield.getData());
-                for (String val : prepped)
-                {
-                    val = fmt.handleSubFieldFormat(codeStr, vf, val);
-                    fmt.addVal(sb, codeStr, val);
-                    fmt.addAfterSubfield(sb, result);
-                }
-                cnt++;
-            }
-        }
-        fmt.addAfterField(sb, result);
-         */
-        
-        
+               
         @Override
         public void addAfterField(StringBuilder sb, Collection<String> result)
         {
@@ -137,17 +93,14 @@ public class AuthorMixin extends SolrIndexerMixin
                     sb.append(output);
                 }
             }
-            super.addAfterField(sb, result);
+            super.addAfterField(sb, result, vb);
         }
     }
  
     private DirectMultiValueExtractor buildExtractor(String specName, String fieldSpecs, String roleFormat, String formatSpec)
     {
-//        if (extractorMap == null) { 
-//            extractorMap = new LinkedHashMap<>();
-//        }
-        if (extractorMap.get().containsKey(specName)) {
-            return(extractorMap.get().get(specName));
+        if (extractorMap.containsKey(specName)) {
+            return(extractorMap.get(specName));
         }
         List<IndexerSpecException> currentExceptions = new ArrayList<>();
         CompositeSpecification specification = null;
@@ -180,7 +133,7 @@ public class AuthorMixin extends SolrIndexerMixin
             decorateMultiValueExtractor("", specName, extractor, mapParts, currentExceptions);
            // AbstractValueIndexer<?> indexer = makeMultiValueIndexer("", specName, extractor, mapParts, currentExceptions);
         }   
-        extractorMap.get().put(specName,  extractor);
+        extractorMap.put(specName,  extractor);
         return extractor;
     }
     
