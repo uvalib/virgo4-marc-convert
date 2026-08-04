@@ -61,18 +61,17 @@ public class AuthorMixin extends SolrIndexerMixin
         public AuthorFieldFormatter(String roleFormat, boolean clean) {
             super(clean);
             this.roleFormat = roleFormat;
-            this.df = null;
             roleCleanVal = EnumSet.noneOf(eCleanVal.class);
             roleCleanVal.add(eCleanVal.CLEAN_EACH);
         }
                
         @Override
-        public void addAfterField(StringBuilder sb, Collection<String> result)
+        public void addAfterField(StringBuilder sb, Collection<String> result, VariableField vf)
         {
             Collection<String> roles = new LinkedHashSet<String>();
-            
-            if (df != null) 
+            if (vf instanceof DataField)
             {
+                DataField df = (DataField) vf;
                 for (Subfield subfield : df.getSubfields())
                 {
                     try {
@@ -89,14 +88,14 @@ public class AuthorMixin extends SolrIndexerMixin
                 String roleStr = String.join(", ", roles);
                 if (roleStr.length() > 0)
                 {
-                	String output = roleFormat.replaceAll("%d",  roleStr);
+                    String output = roleFormat.replaceAll("%d", roleStr);
                     sb.append(output);
                 }
             }
-            super.addAfterField(sb, result, vb);
-        }
+            super.addAfterField(sb, result, vf);
+        } 
     }
- 
+    
     private DirectMultiValueExtractor buildExtractor(String specName, String fieldSpecs, String roleFormat, String formatSpec)
     {
         if (extractorMap.containsKey(specName)) {
