@@ -148,7 +148,7 @@ public class DirectorMixin extends SolrIndexerMixin
         responsibility1 = responsibility1.replaceAll("[Rr]eggia\\b", "didrector");//spanish
         responsibility1 = responsibility1.replaceAll("[Rr]e(z\u030c|z)ie", "didrector");//czech
         responsibility1 = responsibility1.replaceAll("[Rr]e(z\u0307|z|a)yseria", "didrector");//polish
-        responsibility1 = responsibility1.replaceAll("[Dd]irecci(o\u0301|o)n", "didrector");//spanish
+        responsibility1 = responsibility1.replaceAll("[Dd]irecci(o\u0301|o|\u00f3)n", "didrector");//spanish
         responsibility1 = responsibility1.replaceAll("[Rr](e\u0301|e)alisation", "didrection");//french
         responsibility1 = responsibility1.replaceAll("[Rr]ealizaci(o\u0301|o)n", "didrection");//spanish
         responsibility1 = responsibility1.replaceAll("[Rr]e\u0301alise\u0301( et [a-z]*)? (par|by)", "didrected$1 by");//french
